@@ -3,6 +3,10 @@ import LectureConfig as lc
 import unicodedata
 
 
+
+liste_UEX = lc.get_liste_uex()
+
+
 def normaliser_colonne_texte(serie):
     """
     Met en minuscule, enlève les accents et supprime les espaces superflus d'une colonne pandas de type texte.
@@ -31,7 +35,7 @@ Analyse des fichiers pour la gestion des étudiants
 nom_fichier_etudiants = lc.get_name_fichier_etudiants()
 
 # Liste des colonnes à selectionner
-df_etudiants_colonnes = ["N°", "NOM", "PRENOM","REDOUBLANT","UEX"]
+df_etudiants_colonnes = ["N°", "NOM", "PRENOM","UEX"]
 
 # Chargement du fichier Excel avec les colonnes spécifiées
 # Utilisation de `header=0` pour indiquer que la première ligne contient les noms
@@ -54,9 +58,16 @@ def df_etudiants_clean_types(df):
 
     df_copie['N°'] = df_copie['N°'].astype(int)  # Convertit en entier
 
-    # REDOUBLANT : True si la case est remplie (non vide), False sinon
-    df_copie['REDOUBLANT'] = df_copie['REDOUBLANT'].apply(lambda x: not (pd.isna(x) or str(x).strip() == ""))
+    df_copie['UEX'] = normaliser_colonne_texte(df_copie['UEX'])  # Normalise la colonne UEX
+    
+    # VALIDE : True si la colonne UEX contient une des valeurs de liste_UEX, False sinon
+    def is_valid_uex(x):
+        if pd.isna(x):
+            return False
+        x = str(x).strip()
+        return x not in liste_UEX
 
+    df_copie['VALIDE'] = df_copie['UEX'].apply(is_valid_uex)
     return df_copie
 
 

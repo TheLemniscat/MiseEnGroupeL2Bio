@@ -63,9 +63,9 @@ def verif_UEX(df_etud_ref, df_etud_reconstruits):
     erreurs = []
     for idx, row in df_etud_reconstruits.iterrows():
         index_etudiant = row.get('INDEX_ETUDIANT')
-        is_redoublant = df_ref.at[index_etudiant, 'REDOUBLANT']
-        if not is_redoublant:
-            # On ne vérifie que les étudiants qui ne sont pas redoublants
+        is_valide = df_ref.at[index_etudiant, 'VALIDE']
+        if not is_valide:
+            # On ne vérifie que les étudiants qui n'ont pas validé
             if pd.notna(index_etudiant) and index_etudiant in df_ref.index:
                 uex_ref = df_ref.at[index_etudiant, 'UEX']
                 uex_reconstruit = row.get('UEX')

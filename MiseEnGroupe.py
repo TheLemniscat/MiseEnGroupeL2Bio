@@ -17,13 +17,7 @@ dictionnaire_uex = get_dict_uex()
 
 
 liste_uex = lc.get_liste_uex()
-liste_uex = [unicodedata
-             .normalize('NFD', str(uex))
-             .encode('ascii', errors='ignore')
-             .decode('utf-8')
-             .strip()
-             .lower()
-             .replace('  ', ' ') for uex in liste_uex]
+
 
 print("Liste des UEX normalisée :", liste_uex)
 def randomiser_liste(liste):
@@ -54,7 +48,7 @@ def liste_etud_to_classes_etud(liste_etud_uex):
     """
     Transforme la liste des étudiants par UEX en une liste d'objets Etudiant.
     """
-    classes_etud = []
+    liste_equipes = []
     for uex, equipe in liste_etud_uex:
         equipe_tmp = []
         for INDEX in equipe:
@@ -62,15 +56,15 @@ def liste_etud_to_classes_etud(liste_etud_uex):
             nom = normaliser_colonne_texte(etudiant['NOM'])
             prenom = normaliser_colonne_texte(etudiant['PRENOM'])
             numero_etudiant = etudiant['N°']
-            redoublant = etudiant['REDOUBLANT']
+            valide = etudiant['VALIDE']
             
-            etud_obj = Classes.Etudiant(nom, prenom, numero_etudiant, uex, redoublant)
+            etud_obj = Classes.Etudiant(nom, prenom, numero_etudiant, uex, valide)
             equipe_tmp.append(etud_obj)
 
-        classes_etud.append(Classes.Equipe(uex, equipe_tmp, uex))
+        liste_equipes.append(Classes.Equipe(uex, equipe_tmp, uex))
             
     
-    return classes_etud
+    return liste_equipes
 
 
 

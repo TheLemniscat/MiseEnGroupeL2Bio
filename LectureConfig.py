@@ -1,3 +1,5 @@
+import unicodedata
+
 with open('Configuration.txt', 'r') as f:
     lignes = f.readlines()  # Retourne une liste
 
@@ -134,7 +136,17 @@ def get_liste_uex():
     if liste_uex.endswith(' '):
         liste_uex = liste_uex[:-1]
 
-    return [uex.strip() for uex in liste_uex.split(',')]
+    liste_uex = [uex.strip() for uex in liste_uex.split(',')]
+
+    liste_uex = [unicodedata
+             .normalize('NFD', str(uex))
+             .encode('ascii', errors='ignore')
+             .decode('utf-8')
+             .strip()
+             .lower()
+             .replace('  ', ' ') for uex in liste_uex]
+    
+    return liste_uex
 
 
 
