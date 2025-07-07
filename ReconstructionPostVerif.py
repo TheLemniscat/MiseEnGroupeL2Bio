@@ -7,8 +7,6 @@ from collections import deque
 
 
 
-
-
 """
 Recounstruit les équipes après la vérification des étudiants.
 """
