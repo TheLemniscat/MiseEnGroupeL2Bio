@@ -1,0 +1,8 @@
+Nom du fichier liste étudiant : BIOS32024_trame_modif.xlsx
+Nom du fichier équipe : BIOS32024_equipe_modif.xlsx
+Nombre de groupe : 8
+Taille des groupe : 32
+Nombre d'UEX : 3
+Nom du fichier après validation : correction_manuelle_resultat.xlsx
+Liste UEX : BIO303, BIO304, BIO305
+
