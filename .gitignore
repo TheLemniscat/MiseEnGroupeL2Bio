@@ -1,6 +1,6 @@
 mon_env/
 __pycache__/
-
+Data
 
 # Ignore all Excel files
 *.xlsx
