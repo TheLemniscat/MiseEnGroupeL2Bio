@@ -50,10 +50,11 @@ class Groupe:
     taille_max = lc.get_taille_groupes()  # Taille maximale des groupes
     
 
-    def __init__(self, numero, equipes, uex):
+    def __init__(self, numero, equipes, uex, mariage):
         self.numero = numero
         self.equipes = equipes
         self.uex = uex
+        self.mariage = mariage
 
     def get_numero(self):
         return self.numero
@@ -70,5 +71,31 @@ class Groupe:
     def get_taille_max(self):
         return  self.taille_max
     
+    def get_name(self):
+        return f"groupe {self.numero}"
+
     def ajouter_equipe(self, equipe):
         self.equipes.append(equipe)
+
+
+
+
+class Mariage:
+    def __init__(self, uex, membre):
+        self.uex = uex
+        self.membre = membre
+
+    def __str__(self):
+        return f"{self.uex} : {', '.join(groupe.get_name() for groupe in self.membre)}"
+    
+    def get_uex(self):
+        return self.uex
+    
+    def get_membre(self):
+        return self.membre
+    
+    def get_membre_index(self, index):
+        if index < len(self.membre):
+            return self.membre[index]
+        else:
+            raise IndexError("Index out of range for members list.")

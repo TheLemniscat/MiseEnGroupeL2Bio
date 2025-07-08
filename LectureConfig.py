@@ -150,6 +150,24 @@ def get_liste_uex():
 
 
 
+def get_name_mariage():
+    position = lignes[7].find(':')  # Trouve la position du caractère ':'
+    if position == -1:
+        raise ValueError("La huitième ligne du fichier Configuration.txt doit contenir un ':' pour séparer le nom du fichier mariage")
+    
+    position += 1  # Pour ne pas inclure le caractère ':'
+    txt = lignes[7][position:-1]  # Le nom du fichier mariage
+
+    # Vérifie les conditions du nom du fichier mariage
+    if ".xlsx" not in txt:
+        raise NameError("La huitième ligne du fichier Configuration.txt doit contenir le nom du fichier mariage")
+    if txt.startswith(' '):
+        txt = txt[1:]
+    if txt.endswith(' '):
+        txt = txt[:-1]
+    return txt
+
+
 
 if __name__ == "__main__":
     
