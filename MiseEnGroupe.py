@@ -1,4 +1,4 @@
-from ReconstructionPostVerif import get_dict_uex, df_etud_ref
+from ReconstructionPostVerif import get_liste_equipes, df_etud_ref
 import pandas as pd
 import unicodedata
 
@@ -13,7 +13,7 @@ nombre_groupes = lc.get_nombre_groupes()
 
 
 
-dictionnaire_uex = get_dict_uex()
+liste_equipes = get_liste_equipes()
 
 
 liste_uex = lc.get_liste_uex()
@@ -26,45 +26,6 @@ def randomiser_liste(liste):
     """
     return pd.Series(liste).sample(frac=1).tolist()
 
-def get_liste_etud_uex():
-    """
-    Retourn une liste qui pour chaque UEX admet un liste des equipes qui lui sont associés.
-    """
-    liste_etud_uex = []
-    tmp = []
-    for uex in dictionnaire_uex.keys():
-        if uex in liste_uex:
-            liste_tmp = randomiser_liste(dictionnaire_uex[uex])
-            liste_etud_uex.append((uex, liste_tmp))
-        else:
-            tmp.append(dictionnaire_uex[uex])
-    liste_etud_uex.append(("Valide", randomiser_liste(tmp)))
-
-    return liste_etud_uex
-
-
-
-def liste_etud_to_classes_etud(liste_etud_uex):
-    """
-    Transforme la liste des étudiants par UEX en une liste d'objets Etudiant.
-    """
-    liste_equipes = []
-    for uex, equipe in liste_etud_uex:
-        equipe_tmp = []
-        for INDEX in equipe:
-            etudiant = df_etud_ref.loc[INDEX]
-            nom = normaliser_colonne_texte(etudiant['NOM'])
-            prenom = normaliser_colonne_texte(etudiant['PRENOM'])
-            numero_etudiant = etudiant['N°']
-            valide = etudiant['VALIDE']
-            
-            etud_obj = Classes.Etudiant(nom, prenom, numero_etudiant, uex, valide)
-            equipe_tmp.append(etud_obj)
-
-        liste_equipes.append(Classes.Equipe(uex, equipe_tmp, uex))
-            
-    
-    return liste_equipes
 
 
 def get_contraintes_groupes():
@@ -191,14 +152,9 @@ def get_bioint(mariages_liste):
 
 
 if __name__ == "__main__":
-    mariage_liste = creation_des_mariages(creation_des_groupes())
-    get_bioint(mariage_liste)
+    for equipe in liste_equipes:
+        print(equipe)
 
-    print("Liste des mariages :")
-    for mariage in mariage_liste:
-        print(mariage)
-    
-    #print(liste_groupes_uex)
-    
+
 
 

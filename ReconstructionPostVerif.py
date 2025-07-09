@@ -4,6 +4,7 @@ import pandas as pd
 from AnalyseDesFichiers import normaliser_colonne_texte
 from collections import deque
 
+import Classes
 
 
 
@@ -83,16 +84,37 @@ def verif_UEX(df_etud_ref, df_etud_reconstruits):
 def df_to_liste_equipes(df):
     """
     Regroupe les étudiants par numéro d'équipe.
-    Retourne une liste de listes d'INDEX_ETUDIANT, chaque sous-liste représentant une équipe.
+    Retourne une liste d'objets Equipe, chaque équipe contenant des objets Etudiant.
     """
     equipes_liste = []
     if 'NUMERO EQUIPE' not in df.columns:
         raise ValueError("La colonne 'NUMERO EQUIPE' est absente du DataFrame.")
     groupes = df.groupby('NUMERO EQUIPE')
     for _, groupe in groupes:
-        membres = groupe['INDEX_ETUDIANT'].dropna().astype(int).tolist()
-        if membres:
-            equipes_liste.append(membres)
+        index_etudiants = groupe['INDEX_ETUDIANT'].dropna().astype(int).tolist()
+        if index_etudiants:
+            numero_equipe = groupe['NUMERO EQUIPE'].iloc[0]
+            try:
+                uex = groupe['UEX'].iloc[0]
+            except KeyError:
+                raise KeyError("La colonne 'UEX' est absente du DataFrame.")
+            
+            # Créer les objets Etudiant pour cette équipe
+            membres = []
+            for index_etudiant in index_etudiants:
+                etudiant_row = df_etud_ref[df_etud_ref['INDEX_ETUDIANT'] == index_etudiant]
+                if not etudiant_row.empty:
+                    etudiant_data = etudiant_row.iloc[0]
+                    nom = str(etudiant_data['NOM']).strip()
+                    prenom = str(etudiant_data['PRENOM']).strip()
+                    numero = etudiant_data['N°']
+                    valide = etudiant_data['VALIDE']
+                    etudiant = Classes.Etudiant(nom, prenom, numero, uex, valide, index_etudiant)
+                    membres.append(etudiant)
+            
+            if membres:  # Seulement si on a trouvé des étudiants
+                equipe = Classes.Equipe(numero_equipe, membres, uex)
+                equipes_liste.append(equipe)
     
     return equipes_liste
 
@@ -103,28 +125,65 @@ Gère les étudiants qui on fait des chaines d'équipe.
 def get_chaines_equipes(equipes_liste):
     """
     Détecte les chaînes d'équipes : si deux équipes partagent au moins un membre, elles sont fusionnées.
-    Retourne une liste de listes, chaque sous-liste étant une chaîne d'équipes fusionnées.
+    Retourne une liste d'objets Equipe fusionnés.
     """
-
-    # Convertit chaque équipe en set pour faciliter les opérations d'union/intersection
-    equipes_sets = [set(equipe) for equipe in equipes_liste]
+    # Convertit chaque équipe en set d'INDEX_ETUDIANT pour faciliter les opérations d'union/intersection
+    equipes_sets = []
+    equipes_originales = []
+    
+    for equipe in equipes_liste:
+        # Récupère les INDEX_ETUDIANT des membres de l'équipe
+        index_etudiants = set()
+        for etudiant in equipe.get_membres():
+            index_etudiants.add(etudiant.get_index_etud()) 
+        
+        equipes_sets.append(index_etudiants)
+        equipes_originales.append(equipe)
+    
     chaines = []
+    equipes_utilisees = set()
 
-    while equipes_sets:
-        current = equipes_sets.pop(0)
+    for i, current_set in enumerate(equipes_sets):
+        if i in equipes_utilisees:
+            continue
+            
+        equipes_fusionnees = [equipes_originales[i]]
+        equipes_utilisees.add(i)
+        current_union = current_set.copy()
+        
         merged = True
-        est_une_chaine = False
         while merged:
             merged = False
-            for i, other in enumerate(equipes_sets):
-                if current & other:  # Intersection non vide
-                    current = current | other
-                    equipes_sets.pop(i)
+            for j, other_set in enumerate(equipes_sets):
+                if j in equipes_utilisees:
+                    continue
+                if current_union & other_set:  # Intersection non vide
+                    current_union = current_union | other_set
+                    equipes_fusionnees.append(equipes_originales[j])
+                    equipes_utilisees.add(j)
                     merged = True
-                    est_une_chaine = True
-                    break
-        if est_une_chaine:
-            chaines.append(sorted(list(current)))
+        
+        if len(equipes_fusionnees) > 1:
+            # Fusionner toutes les équipes en une seule
+            tous_membres = []
+            uex_equipe = equipes_fusionnees[0].get_uex()  # Prend l'UEX de la première équipe
+            numero_equipe = equipes_fusionnees[0].get_numero()  # Prend le numéro de la première équipe
+            
+            for equipe in equipes_fusionnees:
+                tous_membres.extend(equipe.get_membres())
+            
+            # Supprime les doublons basés sur le numéro d'étudiant
+            membres_uniques = []
+            numeros_vus = set()
+            for membre in tous_membres:
+                if membre.get_numero_etudiant() not in numeros_vus:
+                    membres_uniques.append(membre)
+                    numeros_vus.add(membre.get_numero_etudiant())
+            
+            equipe_fusionnee = Classes.Equipe(numero_equipe, membres_uniques, uex_equipe)
+
+            chaines.append(equipe_fusionnee)
+    
     return chaines
     
 
@@ -135,73 +194,99 @@ def decouper_equipes(equipes_liste):
     """
     taille_max = 5 # Taille maximale des équipes
     equipes_decoupees = []
+    
     for equipe in equipes_liste:
-        if len(equipe) <= taille_max:
+        membres = equipe.get_membres()
+        if equipe.length() <= taille_max:
             equipes_decoupees.append(equipe)
         else:
-            # Découpe l'équipe en sous-équipes de taille maximale
-            for i in range(0, len(equipe), taille_max):
-                equipes_decoupees.append(equipe[i:i + taille_max])
+            # Découpe l'équipe en sous-équipes de taille aussi équilibrée que possible
+            n = equipe.length()
+            # Calcule le nombre de sous-équipes nécessaires
+            nb_equipes = (n + taille_max - 1) // taille_max
+            # Calcule la taille de chaque sous-équipe (équilibrée)
+            base_size = n // nb_equipes
+            reste = n % nb_equipes
+            start = 0
+            
+            for i in range(nb_equipes):
+                size = base_size + (1 if i < reste else 0)
+                sous_membres = membres[start:start+size]
+                # Crée une nouvelle équipe avec un numéro unique (on utilise un hash pour avoir un int)
+                nouveau_numero = int(f"{equipe.get_numero()}00{i+1}")
+                sous_equipe = Classes.Equipe(nouveau_numero, sous_membres, equipe.get_uex())
+                equipes_decoupees.append(sous_equipe)
+                start += size
+            
     return equipes_decoupees
-
 
 def correction_equpie_liste(equipes_liste):
     """
     Corrige les équipes en supprimant les doublons et en normalisant les numéros d'équipe.
-    Retourne une liste de listes d'INDEX_ETUDIANT, chaque sous-liste représentant une équipe.
+    Retourne une liste d'objets Equipe corrigés.
     """
-    equipes_set = set(tuple(sorted(equipe)) for equipe in equipes_liste)
-    equipes_liste_corrigee = [list(equipe) for equipe in equipes_set]
-    chaines_equipes = get_chaines_equipes(equipes_liste_corrigee)
-
-    # Fusionne les chaines d'équipes dans la liste principale
+    # Supprime les équipes en double basées sur les numéros d'étudiants
+    equipes_uniques = []
+    equipes_vues = set()
+    
+    for equipe in equipes_liste:
+        # Crée une signature de l'équipe basée sur les numéros d'étudiants
+        numeros_etudiants = tuple(sorted(etudiant.get_numero_etudiant() for etudiant in equipe.get_membres()))
+        if numeros_etudiants not in equipes_vues:
+            equipes_vues.add(numeros_etudiants)
+            equipes_uniques.append(equipe)
+    
+    # Détecte et fusionne les chaînes d'équipes
+    chaines_equipes = get_chaines_equipes(equipes_uniques)
+    
+    # Supprime les équipes qui ont été fusionnées dans les chaînes
+    equipes_finales = []
+    equipes_dans_chaines = set()
+    
+    # Marque les équipes qui sont dans des chaînes
     for chaine in chaines_equipes:
-        # Supprime toutes les équipes qui ont des membres dans la chaine
-        equipes_liste_corrigee = [equipe for equipe in equipes_liste_corrigee if not set(equipe) & set(chaine)]
-        # Ajoute la chaine fusionnée comme une nouvelle équipe
-        equipes_liste_corrigee.append(sorted(chaine))
+        for membre in chaine.get_membres():
+            equipes_dans_chaines.add(membre.get_numero_etudiant())
+    
+    # Ajoute les équipes qui ne sont pas dans des chaînes
+    for equipe in equipes_uniques:
+        equipe_dans_chaine = any(etudiant.get_numero_etudiant() in equipes_dans_chaines 
+                                for etudiant in equipe.get_membres())
+        if not equipe_dans_chaine:
+            equipes_finales.append(equipe)
+    
+    # Ajoute les chaînes fusionnées
+    equipes_finales.extend(chaines_equipes)
     
     # Supprime les équipes vides ou avec un seul membre
-    equipes_liste_corrigee = [equipe for equipe in equipes_liste_corrigee if len(equipe) > 1]
+    equipes_finales = [equipe for equipe in equipes_finales if equipe.length() > 1]
 
-    return equipes_liste_corrigee
+    return equipes_finales
 
 
-def repartition_UEX(equipes_liste):
+def correction_equipe_liste_UEX(equipes_liste):
     """
-    Répartit les équipes par UEX.
-    Pour chaque équipe, si au moins un membre n'a pas 'valide' dans son UEX,
-    alors l'équipe est associée à la clé UEX sans 'valide'.
-    Retourne un dictionnaire où la clé est l'UEX (corrigée) et la valeur est une liste d'équipes.
+    Si tous les membres d'une équipe ont 'valide' dans leur UEX, on met valide à False.
     """
-    uex_dict = {}
+    equipes_corrigees = []
     for equipe in equipes_liste:
-        if not equipe:
-            continue  # Ignore les équipes vides
-        # Récupère les UEX des membres de l'équipe
-        uex_membres = df_etud_ref.loc[df_etud_ref['INDEX_ETUDIANT'].isin(equipe), 'UEX']
-        # Si au moins un membre n'a pas 'valide', on retire 'valide' de la clé UEX
-        au_moins_un_non_valide = any('valide' not in str(uex).lower() for uex in uex_membres)
-        # On prend l'UEX du premier membre comme référence
-        index_etudiant = equipe[0]
-        uex_selection = df_etud_ref.loc[df_etud_ref['INDEX_ETUDIANT'] == index_etudiant, 'UEX']
-        if isinstance(uex_selection, pd.Series) and not uex_selection.empty:
-            uex = uex_selection.iloc[0]
+        membres = equipe.get_membres()
+        uex = equipe.get_uex()
+        
+        # Vérifie si tous les membres sont valides
+        if all(membre.get_valide() for membre in membres):
+            valide = False
         else:
-            uex = None
-        # Corrige la clé si besoin
-        if au_moins_un_non_valide and uex is not None:
-            uex_corrigee = str(uex).replace('valide', '').strip()
-        else:
-            uex_corrigee = uex
-        if uex_corrigee not in uex_dict:
-            uex_dict[uex_corrigee] = []
-        uex_dict[uex_corrigee].append(equipe)
-    return uex_dict  # Retourne le dictionnaire des équipes par UEX
+            valide = True
+        
+        equipe_corrigee = Classes.Equipe(equipe.get_numero(), membres, uex, valide)
+        equipes_corrigees.append(equipe_corrigee)
+    
+    return equipes_corrigees
 
 
 
-def get_dict_uex():
+def get_liste_equipes():
     """
     Retourne un dictionnaire des UEX et des étudiant associés.
     Chaque clé est une UEX et la valeur est une liste d'équipes.
@@ -216,48 +301,18 @@ def get_dict_uex():
 
     equipes_corrigees = correction_equpie_liste(equipes_liste) # Corrige les équipes en supprimant les doublons et en normalisant les numéros d'équipe
     equipes_decoupees = decouper_equipes(equipes_corrigees) # Découpe les équipes en sous-équipes de taille maximale
-    dictionnaire_uex = repartition_UEX(equipes_decoupees) # Répartit les équipes par UEX
+    equipes_corrigees_uex = correction_equipe_liste_UEX(equipes_decoupees) # Corrige les équipes en fonction de la validité des membres
 
-    # Ajoute les étudiants seuls (ceux qui n'ont pas d'équipe) dans le dictionnaire
-    for index, row in df_etud_ref.iterrows():
-        index_etudiant = row['INDEX_ETUDIANT']
-        if index_etudiant not in df_reconstruction['INDEX_ETUDIANT'].values:
-            uex = row['UEX']
-            if uex not in dictionnaire_uex:
-                dictionnaire_uex[uex] = []
-            dictionnaire_uex[uex].append([index_etudiant])
-    
-    return dictionnaire_uex
+    return equipes_corrigees_uex
 
-
-def verification_dictionnaire_uex(dictionnaire_uex):
-    """
-    Vérifie que le dictionnaire des UEX est cohérent.
-    Chaque UEX doit avoir au moins une équipe. 
-    Tous les étudiants doivent être présents une et une seule fois dans le dictionnaire. (on vérifie que tous les numéros jusqu'au maximum sont présents)
-    """
-    if not isinstance(dictionnaire_uex, dict):
-        raise ValueError("Le dictionnaire des UEX n'est pas un dictionnaire valide.")
-    
-    # Vérifie que chaque UEX a au moins une équipe
-    for uex, equipes in dictionnaire_uex.items():
-        if not equipes:
-            raise ValueError(f"L'UEX '{uex}' n'a pas d'équipes associées.")
-    
-    # Vérifie que tous les étudiants sont présents une et une seule fois dans le dictionnaire
-    index_etudiants = set()
-    for equipes in dictionnaire_uex.values():
-        for equipe in equipes:
-            for index_etudiant in equipe:
-                if index_etudiant in index_etudiants:
-                    raise ValueError(f"L'étudiant avec l'index {index_etudiant} est présent plusieurs fois dans le dictionnaire.")
-                index_etudiants.add(index_etudiant)
 
     
 
 if __name__ == "__main__":
+    
     try:
-        print(get_dict_uex())
+        get_liste_equipes()
+
     except ValueError as e:
         print(f"Erreur de vérification des UEX : {e}")
     except Exception as e:

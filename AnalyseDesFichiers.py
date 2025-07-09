@@ -97,7 +97,7 @@ Analyse des fichiers pour la gestion des équipes
 nom_fichier_equipe = lc.get_name_fichier_equipe()
 
 # Liste des colonnes à selectionner
-df_equipe_colonnes = ["1. UE optionnelle du S3 commune",
+df_equipe_colonnes = ["N°Obs","1. UE optionnelle du S3 commune",
             	"3. Numéro d'étudiant (1)",	"4. _Nom et prénom (1)",
                 "5. Numéro d'étudiant (2)",	"6. _Nom et prénom (2)",	
                 "7. Numéro d'étudiant (3)",	"8. _Nom et prénom (3)",
@@ -124,10 +124,12 @@ def get_df_equipe():
 def df_equipe_clean(df):
     df_copie = df.copy()
     df_copie.columns = [
+        "NUMERO EQUIPE",
         "UEX", "N°1", "NOM et prénom 1",
         "N°2", "NOM et prénom 2", "N°3", "NOM et prénom 3",
         "N°4", "NOM et prénom 4"
     ]  
+
 
     def clean_type(df):
         for i in range(1, 5):
@@ -226,8 +228,10 @@ def df_equipe_clean(df):
         """
         for i in range(1, 5):
             col_nom_prenom = f'NOM et prénom {i}'
-            # Verifie qu'il n'y a pas de numéros dans les noms/prénoms
-            mask_invalid = df[col_nom_prenom].str.contains(r'\d', na=False)
+            # Convertit d'abord en string et ignore les valeurs NaN
+            df_temp = df[col_nom_prenom].astype(str)
+            # Vérifie qu'il n'y a pas de numéros dans les noms/prénoms (ignore 'nan' qui vient des NaN)
+            mask_invalid = df_temp.str.contains(r'\d', na=False) & (df_temp != 'nan')
             if mask_invalid.any():
                 lignes_erreur = df[mask_invalid]
                 raise ValueError(
@@ -262,12 +266,6 @@ def df_equipe_split_names(df):
     return df_copie
 
 
-def df_equipe_add_column_index(df):
-    df_copie = df.copy()  # Crée une copie du DataFrame pour éviter de modifier l'original
-    # Ajoute une colonne 'NUMERO EQUIPE' qui est un index de 1 à n
-    df_copie['NUMERO EQUIPE'] = range(1, len(df_copie) + 1)
-    return df_copie
-
 
 
 
@@ -281,7 +279,7 @@ Comparaison des DataFrames etudiants et équipes pour trouver les étudiants mal
 def df_equipe_normalisation(df):
     df_copie = df.copy()
     df_copie = df_equipe_clean(df_copie)
-    df_copie = df_equipe_add_column_index(df_copie)
+
 
     liste_etudiants = []
     for i in range(1, 5):

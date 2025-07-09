@@ -4,12 +4,13 @@ import LectureConfig as lc
 
 
 class Etudiant:
-    def __init__(self, nom:str, prenom:str, numero_etudiant:int,uex:str,redoublant:bool):
+    def __init__(self, nom:str, prenom:str, numero_etudiant:int,uex:str,valide:bool, index_etud:int):
         self.nom = nom
         self.prenom = prenom
         self.numero_etudiant = numero_etudiant
         self.uex = uex
-        self.redoublant = redoublant
+        self.valide = valide
+        self.index_etud = index_etud
 
     def __str__(self):
         return f"{self.prenom} {self.nom} ({self.numero_etudiant})"
@@ -23,24 +24,36 @@ class Etudiant:
     def get_numero_etudiant(self):
         return self.numero_etudiant
     
+    def get_valide(self):
+        return self.valide
+    
+    def get_index_etud(self):
+        return self.index_etud
 
 
 
 
 class Equipe:
-    def __init__(self, numero:int, membres:list[Etudiant], uex:str):
-        self.numero = numero
+    def __init__(self, numero_equipe:int, membres:list[Etudiant], uex:str, valide:bool = False):
+        self.numero_equipe = numero_equipe
         self.membres = membres
         self.uex = uex
+        self.valide = valide
+
+    def __str__(self):
+        return f"Équipe {self.numero_equipe} : {', '.join(str(membre) for membre in self.membres)} (UEX: {self.uex})"
 
     def get_numero(self):
-        return self.numero
+        return self.numero_equipe
     
     def get_membres(self):
         return self.membres
     
     def get_uex(self):
         return self.uex
+    
+    def get_valide(self):
+        return self.valide
     
     def length(self):
         return len(self.membres)
