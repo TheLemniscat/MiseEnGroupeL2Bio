@@ -16,10 +16,12 @@ nombre_groupes = lc.get_nombre_groupes()
 taille_groupes = lc.get_taille_groupes()
 nombre_uex = lc.get_nombre_uex()
 
-
-df_etud_ref = pd.read_excel(nom_fichier_verifie, sheet_name='etudiants')
-df_etud_trouves = pd.read_excel(nom_fichier_verifie, sheet_name='trouves')
-df_etud_non_trouves = pd.read_excel(nom_fichier_verifie, sheet_name='non_trouves')
+try:
+    df_etud_ref = pd.read_excel(nom_fichier_verifie, sheet_name='etudiants')
+    df_etud_trouves = pd.read_excel(nom_fichier_verifie, sheet_name='trouves')
+    df_etud_non_trouves = pd.read_excel(nom_fichier_verifie, sheet_name='non_trouves')
+except FileNotFoundError:
+    raise FileNotFoundError(f"Le fichier '{nom_fichier_verifie}' n'a pas été crée. Veuillez d'abord exécuter le script d'analyse des fichiers.")
 
 
 def supprimer_lignes_sans_index(df):

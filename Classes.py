@@ -4,13 +4,15 @@ import LectureConfig as lc
 
 
 class Etudiant:
-    def __init__(self, nom, prenom, numero_etudiant,uex,redoublant):
+    def __init__(self, nom:str, prenom:str, numero_etudiant:int,uex:str,redoublant:bool):
         self.nom = nom
         self.prenom = prenom
         self.numero_etudiant = numero_etudiant
         self.uex = uex
         self.redoublant = redoublant
 
+    def __str__(self):
+        return f"{self.prenom} {self.nom} ({self.numero_etudiant})"
 
     def get_nom(self):
         return self.nom
@@ -21,13 +23,12 @@ class Etudiant:
     def get_numero_etudiant(self):
         return self.numero_etudiant
     
-    def __str__(self):
-        return f"{self.prenom} {self.nom} ({self.numero_etudiant})"
+
 
 
 
 class Equipe:
-    def __init__(self, numero, membres, uex):
+    def __init__(self, numero:int, membres:list[Etudiant], uex:str):
         self.numero = numero
         self.membres = membres
         self.uex = uex
@@ -50,52 +51,83 @@ class Groupe:
     taille_max = lc.get_taille_groupes()  # Taille maximale des groupes
     
 
-    def __init__(self, numero, equipes, uex, mariage):
-        self.numero = numero
-        self.equipes = equipes
-        self.uex = uex
-        self.mariage = mariage
-
-    def get_numero(self):
-        return self.numero
+    def __init__(self, nom_groupe:str, equipes_liste:list[Equipe], uex_liste:list[str]):
+        self.nom_groupe = nom_groupe
+        self.equipes_liste = equipes_liste
+        self.uex_liste = uex_liste
+        
+    def get_name(self):
+        return self.nom_groupe
     
     def get_equipes(self):
-        return self.equipes
+        return self.equipes_liste
     
     def length(self):
-        return len(self.equipes)
-    
-    def get_uex(self):
-        return self.uex
+        taille = 0
+        for equipe in self.equipes_liste:
+            taille += equipe.length()
+        
+        return taille
     
     def get_taille_max(self):
         return  self.taille_max
     
-    def get_name(self):
-        return f"groupe {self.numero}"
+    def modfifier_taille_max(self, taille_max:int):
+        if taille_max > 0:
+            self.taille_max = taille_max
+        else:
+            raise ValueError("La taille maximale doit être un entier positif.")
+
+    
+    def get_uex_liste(self):
+        return self.uex_liste
+
 
     def ajouter_equipe(self, equipe):
-        self.equipes.append(equipe)
+        self.equipes_liste.append(equipe)
+
+    def enlever_equipe(self, equipe):
+        if equipe in self.equipes_liste:
+            self.equipes_liste.remove(equipe)
+        else:
+            raise ValueError("L'équipe n'est pas dans le groupe.")
+
+
+
 
 
 
 
 class Mariage:
-    def __init__(self, uex, membre):
+    taille_max = lc.get_taille_groupes() # Taille maximale des mariages
+    
+    def __init__(self, uex:str, groupes_liste:list[Groupe]):
         self.uex = uex
-        self.membre = membre
+        self.groupes_liste = groupes_liste
 
     def __str__(self):
-        return f"{self.uex} : {', '.join(groupe.get_name() for groupe in self.membre)}"
+        return f"{', '.join(groupe.get_name() for groupe in self.groupes_liste)} : {self.uex}, taille max: {self.taille_max}"
     
     def get_uex(self):
         return self.uex
     
-    def get_membre(self):
-        return self.membre
+    def get_groupes_liste(self):
+        return self.groupes_liste
     
-    def get_membre_index(self, index):
-        if index < len(self.membre):
-            return self.membre[index]
+    def get_taille_max(self):
+        return self.taille_max
+    
+    def length(self):
+        taille = 0
+        for groupe in self.groupes_liste:
+            for equipe in groupe.get_equipes():
+                if equipe.get_uex() == self.uex:
+                    taille += equipe.length()
+        
+        return taille
+
+    def modifier_taille_max(self, taille_max:int):
+        if taille_max > 0:
+            self.taille_max = taille_max
         else:
-            raise IndexError("Index out of range for members list.")
+            raise ValueError("La taille maximale doit être un entier positif.")
