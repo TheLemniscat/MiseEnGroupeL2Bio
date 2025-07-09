@@ -305,7 +305,31 @@ def get_liste_equipes():
 
     return equipes_corrigees_uex
 
+def get_etudiant_not_in_equipes(equipes_liste):
+    """
+    Retourne une liste d'objets Etudiant qui ne sont pas dans les équipes.
+    """
 
+
+    index_etudiants_dans_equipes = set()
+    for equipe in equipes_liste:
+        for membre in equipe.get_membres():
+            index_etudiants_dans_equipes.add(membre.get_index_etud())
+    
+    etudiants_non_dans_equipes_df = df_etud_ref[~df_etud_ref['INDEX_ETUDIANT'].isin(index_etudiants_dans_equipes)]
+    
+    etudiants_non_dans_equipes = []
+    for _, row in etudiants_non_dans_equipes_df.iterrows():
+        nom = str(row['NOM']).strip()
+        prenom = str(row['PRENOM']).strip()
+        numero = row['N°']
+        uex = row['UEX']
+        valide = row['VALIDE']
+        index_etudiant = row['INDEX_ETUDIANT']
+        etudiant = Classes.Etudiant(nom, prenom, numero, uex, valide, index_etudiant)
+        etudiants_non_dans_equipes.append(etudiant)
+    
+    return etudiants_non_dans_equipes
     
 
 if __name__ == "__main__":

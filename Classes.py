@@ -24,6 +24,9 @@ class Etudiant:
     def get_numero_etudiant(self):
         return self.numero_etudiant
     
+    def get_uex(self):
+        return self.uex
+    
     def get_valide(self):
         return self.valide
     
@@ -68,6 +71,9 @@ class Groupe:
         self.nom_groupe = nom_groupe
         self.equipes_liste = equipes_liste
         self.uex_liste = uex_liste
+
+    def __str__(self):
+        return f"{self.nom_groupe} (taille max: {self.taille_max}) : {', '.join(equipe.get_uex() for equipe in self.equipes_liste)}"
         
     def get_name(self):
         return self.nom_groupe

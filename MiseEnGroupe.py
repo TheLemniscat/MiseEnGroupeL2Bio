@@ -1,4 +1,4 @@
-from ReconstructionPostVerif import get_liste_equipes, df_etud_ref
+from ReconstructionPostVerif import get_liste_equipes, get_etudiant_not_in_equipes
 import pandas as pd
 import unicodedata
 
@@ -12,10 +12,6 @@ nombre_groupes = lc.get_nombre_groupes()
 
 
 
-
-liste_equipes = get_liste_equipes()
-
-
 liste_uex = lc.get_liste_uex()
 liste_uex_majuscule = [uex.upper() for uex in liste_uex]
 
@@ -25,6 +21,13 @@ def randomiser_liste(liste):
     Randomise la liste donnée en paramètre.
     """
     return pd.Series(liste).sample(frac=1).tolist()
+
+def liste_etudiants_to_liste_equipes(liste_etudiants):
+    """
+    Transforme une liste d'étudiants en une liste d'équipes.
+    Chaque équipe contient un seul étudiant.
+    """
+    return [Classes.Equipe(-etudiant.get_index_etud(), [etudiant], etudiant.get_uex(), True) for etudiant in liste_etudiants]
 
 
 
@@ -69,14 +72,12 @@ def creation_des_groupes():
         
         groupes_liste.append(groupe)
 
-    groupe_bioint = Classes.Groupe('bioint', [], liste_uex_majuscule)
-    groupes_liste.append(groupe_bioint)
 
     return groupes_liste
 
 
-
-
+def creation_groupe_bioint():
+    return Classes.Groupe('bioint', [], liste_uex_majuscule)
 
 def creation_des_mariages(liste_groupes):
     """ 
@@ -163,35 +164,57 @@ def score_mariage(mariage):
     return mariage.length() / mariage.get_taille_max()
                             
 
+def mise_en_groupe_determinee(liste_groupe, liste_equipes):
+    """
+    Cherche les UEX qui ne sont que dans un seul groupe et ajoute les équpie et étudiant correspondants
+    """
+    for uex in liste_uex_majuscule:
+        count = 0
+        groupe_teste = None
+        for i, groupe in enumerate(liste_groupe):
+            if uex in groupe.get_uex_liste():
+                count += 1
+                groupe_teste = liste_groupe[i]
+
+        
+        if count == 1 and groupe_teste is not None:
+            groupe = groupe_teste
+            for equipe in liste_equipes:
+                if uex.lower() in equipe.get_uex():
+                    groupe.ajouter_equipe(equipe)
+                    liste_equipes.remove(equipe)
+        
+    
 
 
 
 if __name__ == "__main__":
     liste_groupes = creation_des_groupes()
-    liste_mariages = creation_des_mariages(liste_groupes)
+    goupe_bioint = creation_groupe_bioint()
+    liste_groupes_avec_bioint = liste_groupes + [goupe_bioint]
+    
+    
+    liste_mariages = creation_des_mariages(liste_groupes_avec_bioint)
     modification_mariage_bioint(liste_mariages)
+    
     liste_equipes = get_liste_equipes()
-    
-    groupe = liste_groupes[2]
-    equipe = liste_equipes[0]
-    mariage = liste_mariages[3]
-    groupe.ajouter_equipe(equipe)
-    
-    score_du_mariage = score_mariage(liste_mariages[4])
-    
-    print(mariage.get_taille_max())
-    print(f"{mariage.get_uex()} : {', '.join(grp.get_name() for grp in mariage.get_groupes_liste())} : {score_mariage(mariage)}")
-    print(equipe)
-    print(f'{groupe.get_name()} : {score_groupe(groupe)}')
+    liste_equipes = randomiser_liste(liste_equipes)
 
-    if False:
-        print(liste_equipes[0])
+    liste_etudiants = get_etudiant_not_in_equipes(liste_equipes)
+    liste_etudiants = randomiser_liste(liste_etudiants)
+
+    liste_etudiants = liste_etudiants_to_liste_equipes(liste_etudiants)
+
+    liste_equipes_complete = liste_equipes + liste_etudiants
+
+
+    mise_en_groupe_determinee(liste_groupes, liste_equipes_complete)
+    
+    if True:
         for groupe in liste_groupes:
-            print(f'{groupe.get_name()} : {score_groupe(groupe)}')
-        
-        for mariage in liste_mariages:
-            pass
-
+            print(f"{groupe.get_name()} : {groupe.length()}/{groupe.get_taille_max()} ({score_groupe(groupe) * 100:.2f}%)")
+            for equipe in groupe.get_equipes():
+                print(f"-{equipe}")
 
 
 
