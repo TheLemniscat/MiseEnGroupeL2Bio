@@ -266,7 +266,7 @@ def correction_equpie_liste(equipes_liste):
 
 def correction_equipe_liste_UEX(equipes_liste):
     """
-    Si tous les membres d'une équipe ont 'valide' dans leur UEX, on met valide à False.
+    Si tous les membres d'une équipe ont 'valide' dans leur UEX, on met valide à True.
     """
     equipes_corrigees = []
     for equipe in equipes_liste:
@@ -275,9 +275,9 @@ def correction_equipe_liste_UEX(equipes_liste):
         
         # Vérifie si tous les membres sont valides
         if all(membre.get_valide() for membre in membres):
-            valide = False
-        else:
             valide = True
+        else:
+            valide = False
         
         equipe_corrigee = Classes.Equipe(equipe.get_numero(), membres, uex, valide)
         equipes_corrigees.append(equipe_corrigee)

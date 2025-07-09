@@ -41,7 +41,7 @@ class Equipe:
         self.valide = valide
 
     def __str__(self):
-        return f"Équipe {self.numero_equipe} : {', '.join(str(membre) for membre in self.membres)} (UEX: {self.uex})"
+        return f"Équipe {self.numero_equipe} (UEX: {self.uex}, VALIDE: {self.valide}): {', '.join(str(membre) for membre in self.membres)} "
 
     def get_numero(self):
         return self.numero_equipe
@@ -115,12 +115,18 @@ class Mariage:
     taille_max = lc.get_taille_groupes() # Taille maximale des mariages
     
     def __init__(self, uex:str, groupes_liste:list[Groupe]):
-        self.uex = uex
+        self.uex = self.init_uex(uex)
         self.groupes_liste = groupes_liste
 
     def __str__(self):
         return f"{', '.join(groupe.get_name() for groupe in self.groupes_liste)} : {self.uex}, taille max: {self.taille_max}"
     
+    def init_uex(self,uex:str):
+        """
+        Normalise l'UEX du mariage.
+        """
+        return uex.lower().strip()
+
     def get_uex(self):
         return self.uex
     
