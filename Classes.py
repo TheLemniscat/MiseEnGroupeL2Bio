@@ -78,8 +78,6 @@ class Groupe:
     def get_name(self):
         return self.nom_groupe
     
-    def get_equipes(self):
-        return self.equipes_liste
     
     def length(self):
         taille = 0
@@ -91,12 +89,11 @@ class Groupe:
     def get_taille_max(self):
         return  self.taille_max
     
-    def modfifier_taille_max(self, taille_max:int):
+    def set_taille_max(self, taille_max:int):
         if taille_max > 0:
             self.taille_max = taille_max
         else:
             raise ValueError("La taille maximale doit être un entier positif.")
-
     
     def get_uex_liste(self):
         return self.uex_liste
@@ -110,8 +107,12 @@ class Groupe:
             self.equipes_liste.remove(equipe)
         else:
             raise ValueError("L'équipe n'est pas dans le groupe.")
-
-
+    
+    def get_liste_equipes(self):
+        return self.equipes_liste
+    
+    def set_liste_equipes(self, nouvelle_liste):
+        self.equipes_liste = nouvelle_liste
 
 
 
@@ -120,9 +121,12 @@ class Groupe:
 class Mariage:
     taille_max = lc.get_taille_groupes() # Taille maximale des mariages
     
-    def __init__(self, uex:str, groupes_liste:list[Groupe]):
+    def __init__(self, numero:int, uex:str, groupes_liste:list[Groupe], bioint:int = 0):
+        self.numero = numero
         self.uex = self.init_uex(uex)
         self.groupes_liste = groupes_liste
+        self.bioint = bioint
+        self.taille_max = self.taille_max
 
     def __str__(self):
         return f"{', '.join(groupe.get_name() for groupe in self.groupes_liste)} : {self.uex}, taille max: {self.taille_max}"
@@ -133,6 +137,9 @@ class Mariage:
         """
         return uex.lower().strip()
 
+    def get_numero(self):
+        return self.numero
+    
     def get_uex(self):
         return self.uex
     
@@ -140,18 +147,30 @@ class Mariage:
         return self.groupes_liste
     
     def get_taille_max(self):
+        return self.taille_max - self.bioint
+    
+    def get_taille_max_bioint(self):
         return self.taille_max
+    
+    def get_bioint(self):
+        return self.bioint
+    
+    def set_bioint(self, bioint:int):
+        if bioint >= 0:
+            self.bioint = bioint
+        else:
+            raise ValueError("Le nombre de bioint doit être un entier positif ou nul.")
     
     def length(self):
         taille = 0
         for groupe in self.groupes_liste:
-            for equipe in groupe.get_equipes():
+            for equipe in groupe.get_liste_equipes():
                 if equipe.get_uex() == self.uex:
                     taille += equipe.length()
         
         return taille
 
-    def modifier_taille_max(self, taille_max:int):
+    def set_taille_max(self, taille_max:int):
         if taille_max > 0:
             self.taille_max = taille_max
         else:
