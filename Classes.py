@@ -34,7 +34,20 @@ class Etudiant:
         return self.index_etud
 
 
+class EtudiantEnPlace(Etudiant):
+    def __init__(self, nom:str, prenom:str, numero_etudiant:int, uex:str, valide:bool, index_etud:int, goupe:int, equipe:int):
+        super().__init__(nom, prenom, numero_etudiant, uex, valide, index_etud)
+        self.groupe = goupe
+        self.equipe = equipe
 
+    def get_groupe(self):
+        return self.groupe
+
+    def get_equipe(self):
+        return self.equipe
+
+    def __str__(self):
+        return f"{super().__str__()} - Groupe: {self.groupe}"
 
 class Equipe:
     def __init__(self, numero_equipe:int, membres:list[Etudiant], uex:str, valide:bool = False):
@@ -67,14 +80,18 @@ class Groupe:
     taille_max = lc.get_taille_groupes()  # Taille maximale des groupes
     
 
-    def __init__(self, nom_groupe:str, equipes_liste:list[Equipe], uex_liste:list[str]):
+    def __init__(self, numero_groupe:int, nom_groupe:str, equipes_liste:list[Equipe], uex_liste:list[str]):
+        self.numero_groupe = numero_groupe
         self.nom_groupe = nom_groupe
         self.equipes_liste = equipes_liste
         self.uex_liste = uex_liste
 
     def __str__(self):
-        return f"{self.nom_groupe} (taille max: {self.taille_max}) : {', '.join(equipe.get_uex() for equipe in self.equipes_liste)}"
+        return f"{self.nom_groupe} (taille max: {self.taille_max}) : {', '.join(str(equipe.get_numero()) for equipe in self.equipes_liste)}"
         
+    def get_numero(self):
+        return self.numero_groupe
+   
     def get_name(self):
         return self.nom_groupe
     

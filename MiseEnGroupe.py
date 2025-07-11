@@ -74,11 +74,12 @@ def creation_des_groupes():
     for i in range(nombre_groupes):
         liste_equipes = []
 
-        nom_groupe = f"groupe {i+1}"
+        numero_groupe = i + 1
+        nom_groupe = f"groupe {numero_groupe}"
         uex_groupe = [uex for uex in liste_uex_majuscule if df_UEX_groupes.loc[i, uex]]
 
         # Création de l'objet Groupe
-        groupe = Classes.Groupe(nom_groupe, liste_equipes, uex_groupe)
+        groupe = Classes.Groupe(numero_groupe,nom_groupe, liste_equipes, uex_groupe)
         
         groupes_liste.append(groupe)
 
@@ -87,7 +88,7 @@ def creation_des_groupes():
 
 
 def creation_groupe_bioint():
-    return Classes.Groupe('bioint', [], liste_uex_majuscule)
+    return Classes.Groupe(-1,'bioint', [], liste_uex_majuscule)
 
 def get_bioint_liste():
     """
@@ -273,32 +274,6 @@ def score_si_ajout_mariage(liste_mariages, groupe, equipe):
     return new_lenght / mariage.get_taille_max()
 
 
-def mise_en_groupe(liste_groupes, liste_equipes, liste_mariages):
-    """
-    Met en groupe les équipes dans les groupes.
-    """
-    while liste_equipes:
-        equipe = liste_equipes.pop(0)
-        uex = equipe.get_uex().upper()
-
-        # Cherche le groupe qui est le moins pénalisé pour l'UEX de l' équipe
-        score_penalisant = len(liste_groupes) + len(liste_mariages) # Le score maximal atteignable
-        groupe_trouve = None
-        for groupe in liste_groupes:
-            if uex in groupe.get_uex_liste() or equipe.get_valide():
-                score_tmp = score_si_ajout_groupe(groupe, equipe) + score_si_ajout_mariage(liste_mariages, groupe, equipe)
-                if score_tmp < score_penalisant:
-                    score_penalisant = score_tmp 
-                    groupe_trouve = groupe
-
-
-        if groupe_trouve is not None:
-            groupe_trouve.ajouter_equipe(equipe)
-        else:
-            pass
-            raise ValueError(f"Aucun groupe trouvé pour l'équipe {equipe} avec l'UEX {uex}.")
-
-
 
 
 def resoudre_affectation(equipes, groupes, mariages):
@@ -437,7 +412,7 @@ def resoudre_affectation(equipes, groupes, mariages):
         model.Add(ecart_mariages == 0)
 
     # Fonction objectif combinée : minimiser la somme des deux écarts
-    model.Minimize(ecart_mariages)
+    model.Minimize(ecart_groupes + ecart_mariages)
 
 
     model.Minimize(ecart_groupes)
@@ -506,7 +481,7 @@ def recherche_solution_parfaite_adaptative(equipes, groupes, mariages, max_itera
                    taille_actuelle = mariage.get_taille_max_bioint()
                    mariage.set_taille_max(taille_actuelle + 1)
         
-        print(f"Iteration {iteration}: Taille des mariages augmentée, nouvelle taille max: {[m.get_taille_max() for m in mariages]}")
+        
 
     
     return None, False
@@ -576,32 +551,15 @@ def fonction_main():
     affectation, success = recherche_solution_parfaite_adaptative(
         liste_equipes_complete, liste_groupes, liste_mariages, max_iterations=10
     )
-    
-    if success and affectation:
-        # Application de l'affectation
-        succes_application = appliquer_affectation(liste_equipes_complete, liste_groupes, affectation)
-        
-        if succes_application:
-            # Calcul des statistiques finales
-            nb_etudiants = sum(equipe.length() for equipe in liste_equipes_complete)
-            nb_places = sum(groupe.get_taille_max() for groupe in liste_groupes)
-            nb_etudiants_place = sum(groupe.length() for groupe in liste_groupes)
-            
-            return nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages
-        else:
-            return None, None, None, None, None
-    else:
-        # Fallback vers l'ancienne méthode
-        try:
-            mise_en_groupe(liste_groupes, liste_equipes_complete, liste_mariages)
-            
-            nb_etudiants = sum(equipe.length() for equipe in liste_equipes_complete)
-            nb_places = sum(groupe.get_taille_max() for groupe in liste_groupes)
-            nb_etudiants_place = sum(groupe.length() for groupe in liste_groupes)
-            
-            liste_mariages = ajouter_bioint_mariage(liste_groupes)
 
-            return nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages
-            
-        except Exception as e:
-            return None, None, None, None, None
+    succes_application = appliquer_affectation(liste_equipes_complete, liste_groupes, affectation)
+    
+    if succes_application:
+        # Calcul des statistiques finales
+        nb_etudiants = sum(equipe.length() for equipe in liste_equipes_complete)
+        nb_places = sum(groupe.get_taille_max() for groupe in liste_groupes)
+        nb_etudiants_place = sum(groupe.length() for groupe in liste_groupes)
+        
+        return nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages
+    else:
+        return None, None, None, None, None
