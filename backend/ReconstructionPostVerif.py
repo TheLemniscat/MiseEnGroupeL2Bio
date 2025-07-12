@@ -1,7 +1,7 @@
 import LectureConfig as lc
 import pandas as pd
 
-from AnalyseDesFichiers import normaliser_colonne_texte
+from Tools import normaliser_colonne_texte
 from collections import deque
 
 import Classes

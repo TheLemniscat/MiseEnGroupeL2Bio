@@ -1,8 +1,6 @@
-import AnalyseDesFichiers as AF
-import LectureConfig as lc
-import MiseEnGroupe as MEG
-import sys
-import time
+import backend.AnalyseDesFichiers as AF
+import backend.LectureConfig as lc
+import backend.MiseEnGroupe as MEG
 
 def lancer_mise_en_groupe():
     """Lance la mise en groupe automatique."""

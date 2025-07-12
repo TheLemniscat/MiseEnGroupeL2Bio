@@ -1,98 +1,7 @@
 import pandas as pd
 import LectureConfig as lc
-import unicodedata
+from Tools import normaliser_colonne_texte
 
-
-
-liste_UEX = lc.get_liste_uex()
-
-
-def normaliser_colonne_texte(serie):
-    """
-    Met en minuscule, enlève les accents et supprime les espaces superflus d'une colonne pandas de type texte.
-    Ne modifie pas les valeurs NaN.
-    """
-    # On traite uniquement les valeurs non nulles
-    mask_notna = serie.notna()
-    serie_out = serie.copy()
-    serie_out[mask_notna] = (
-        serie_out[mask_notna].astype(str)
-        .str.lower()
-        .apply(lambda x: unicodedata.normalize('NFD', x))
-        .str.encode('ascii', errors='ignore')
-        .str.decode('utf-8')
-        .str.strip()
-        .str.replace(r'\s+', ' ', regex=True)
-    )
-    return serie_out
-        
-
-
-
-
-"""
-
-Analyse des fichiers pour la gestion des étudiants
-
-"""
-# Lecture de la configuration
-nom_fichier_etudiants = lc.get_name_fichier_etudiants()
-
-# Liste des colonnes à selectionner
-df_etudiants_colonnes = ["N°", "NOM", "PRENOM","UEX"]
-
-# Chargement du fichier Excel avec les colonnes spécifiées
-# Utilisation de `header=0` pour indiquer que la première ligne contient les noms
-
-def get_df_etudiants():
-    try:
-        return pd.read_excel(nom_fichier_etudiants, header=0, usecols=df_etudiants_colonnes)
-    except ValueError:
-        raise ValueError(f"Le fichier {nom_fichier_etudiants} ne contient pas les colonnes requises : {df_etudiants_colonnes}")
-
-def df_etudiants_clean_types(df):
-    # Convertit les colonnes spécifiques en types appropriés, les nombres sont des entiers
-    df_copie = df.copy()  # Crée une copie du DataFrame pour éviter de modifier l'original
-
-    # Vérification des valeurs non convertibles pour la colonne 'N°'
-    mask_num = ~df_copie['N°'].apply(lambda x: pd.api.types.is_integer(x) or (isinstance(x, float) and x.is_integer()))
-    if mask_num.any():
-        lignes_erreur = df_copie[mask_num]
-        raise ValueError(f"Il y a un problème dans les numéros d'étudiants, du fichier {nom_fichier_etudiants}, lignes en erreur :\n{lignes_erreur}")
-
-    df_copie['N°'] = df_copie['N°'].astype(int)  # Convertit en entier
-
-    df_copie['UEX'] = normaliser_colonne_texte(df_copie['UEX'])  # Normalise la colonne UEX
-    
-    # VALIDE : True si la colonne UEX contient une des valeurs de liste_UEX, False sinon
-    def is_valid_uex(x):
-        if pd.isna(x):
-            return False
-        x = str(x).strip()
-        return x not in liste_UEX
-
-    df_copie['VALIDE'] = df_copie['UEX'].apply(is_valid_uex)
-    return df_copie
-
-
-
-def df_etudiants_add_column_index(df):
-    df_copie = df.copy()
-    df_copie['INDEX_ETUDIANT'] = range(1, len(df_copie) + 1)
-    return df_copie
-
-
-
-
-
-
-
-
-"""
-
-Analyse des fichiers pour la gestion des équipes
-
-"""
 # Lecture de la configuration
 nom_fichier_equipe = lc.get_name_fichier_equipe()
 
@@ -104,7 +13,8 @@ df_equipe_colonnes = ["N°Obs","1. UE optionnelle du S3 commune",
                 "9. Numéro d'étudiant (4)",	"10. _Nom et prénom (4)"
 ]
 
-def get_df_equipe():    
+def get_df_equipe(file_path):    
+    nom_fichier_equipe = file_path
     try:
         return pd.read_excel(nom_fichier_equipe, header=0, usecols=df_equipe_colonnes)
     except ValueError as e:
@@ -117,7 +27,7 @@ def get_df_equipe():
         if missing:
             raise ValueError(f"Le fichier {nom_fichier_equipe} ne contient pas les colonnes requises : {missing}")
         else:
-            raise
+            raise ValueError(f"Le fichier {nom_fichier_equipe} ne contient pas les colonnes requises : {df_equipe_colonnes}") from e
 
 
 
@@ -269,13 +179,6 @@ def df_equipe_split_names(df):
 
 
 
-"""
-
-Comparaison des DataFrames etudiants et équipes pour trouver les étudiants mal renseignés
-
-"""
-
-
 def df_equipe_normalisation(df):
     df_copie = df.copy()
     df_copie = df_equipe_clean(df_copie)
@@ -297,118 +200,18 @@ def df_equipe_normalisation(df):
     return df_out[['N°', 'NOM_PRENOM', 'NUMERO EQUIPE', 'UEX']]
 
 
-def df_etudiants_normalisation(df_etudiants):
-    df_etudiants = df_etudiants_clean_types(df_etudiants)
-    df_out = df_etudiants.copy()
-    df_out['NOM'] = normaliser_colonne_texte(df_out['NOM'])
-    df_out['PRENOM'] = normaliser_colonne_texte(df_out['PRENOM'])
-    return df_out
 
-
-def df_verification_existance(df_etudiants, df_equipe):
-    # On ne normalise plus les noms/prénoms, on compare uniquement sur N°
-    df_etud = df_etudiants.copy()
-    df_equip = df_equipe.copy()
-
-    # On ignore les numéros d'étudiant à -1 (issus de NaN)
-    df_equip = df_equip[df_equip['N°'] != -1]
-
-    merged = df_equip.merge(
-        df_etud[['N°', 'INDEX_ETUDIANT']],
-        on=['N°'],
-        how='left',
-        indicator=True
-    )
-
-    trouves = merged[merged['_merge'] == 'both'].copy()
-    non_trouves = merged[merged['_merge'] == 'left_only'].copy()
-
-    cols = list(df_equipe.columns) + ['INDEX_ETUDIANT']
-    trouves = trouves[cols]
-    non_trouves = non_trouves[cols]
-
-    return trouves, non_trouves
+def netoyage_fichier_equipe(file_path):
+    """
+    Nettoie le fichier d'équipe en supprimant les lignes vides et les doublons.
+    """
+    try:
+        df_equipe = get_df_equipe(file_path)
+        df_equipe = df_equipe_clean(df_equipe)
+        df_equipe = df_equipe_normalisation(df_equipe)
+        df_equipe = df_equipe_split_names(df_equipe)
     
-
-
-
-
-def noms_non_concordants(df_etudiants, df_equipe):
-    # Crée une colonne NOM_PRENOM dans df_etudiants pour la comparaison
-    df_etud = df_etudiants.copy()
-    df_equip = df_equipe.copy().drop('UEX', axis=1, errors='ignore')
-
-    df_equip['NOM_PRENOM_EQUIPE'] = normaliser_colonne_texte(df_equip['NOM_PRENOM'])
-    df_etud['NOM_PRENOM_ETUD'] = normaliser_colonne_texte(df_etud['NOM'] + ' ' + df_etud['PRENOM'])
-    df_etud['PRENOM_NOM_ETUD'] = normaliser_colonne_texte(df_etud['PRENOM'] + ' ' + df_etud['NOM'])
-
-    merged = df_equip.merge(
-        df_etud[['N°', 'NOM_PRENOM_ETUD', 'PRENOM_NOM_ETUD', 'INDEX_ETUDIANT']],
-        on='N°',
-        how='left',
-        indicator=True
-    )
-
-    # On sélectionne les cas où le numéro existe mais le nom/prénom ne correspond à aucun ordre
-    noms_non_concord = merged[
-        (merged['_merge'] == 'both') &
-        (~(
-            (merged['NOM_PRENOM_EQUIPE'] == merged['NOM_PRENOM_ETUD']) |
-            (merged['NOM_PRENOM_EQUIPE'] == merged['PRENOM_NOM_ETUD'])
-        ))
-    ].copy()
-
-    return noms_non_concord[['N°', 'NOM_PRENOM_EQUIPE', 'NOM_PRENOM_ETUD', 'NUMERO EQUIPE', 'INDEX_ETUDIANT']]
+        return df_equipe.reset_index(drop=True)
     
-
-def suggere_etudiant_par_nom(non_trouves, df_etud_norm):
-    # On prépare une colonne NOM_PRENOM normalisée dans les deux DataFrames
-    non_trouves = non_trouves.copy()
-    df_etud_norm = df_etud_norm.copy()
-    non_trouves['NOM_PRENOM'] = normaliser_colonne_texte(non_trouves['NOM_PRENOM'])
-    df_etud_norm['NOM_PRENOM'] = normaliser_colonne_texte(df_etud_norm['NOM'] + ' ' + df_etud_norm['PRENOM'])
-    df_etud_norm['PRENOM_NOM'] = normaliser_colonne_texte(df_etud_norm['PRENOM'] + ' ' + df_etud_norm['NOM'])
-
-    suggestions = []
-    for nom_prenom in non_trouves['NOM_PRENOM']:
-        # Cherche d'abord NOM PRENOM
-        matches = df_etud_norm[df_etud_norm['NOM_PRENOM'] == nom_prenom]
-        # Sinon cherche PRENOM NOM
-        if matches.empty:
-            matches = df_etud_norm[df_etud_norm['PRENOM_NOM'] == nom_prenom]
-        if not matches.empty:
-            suggestions.append(matches.iloc[0]['INDEX_ETUDIANT'])
-        else:
-            suggestions.append(None)
-    non_trouves['INDEX_ETUDIANT'] = suggestions
-    return non_trouves
-
-
-def correction_manuelle():
-    df_etudiants = get_df_etudiants()
-    df_etudiants = df_etudiants_add_column_index(df_etudiants)
-
-    df_equipe = get_df_equipe()
-    
-    df_etud_norm = df_etudiants_normalisation(df_etudiants)
-    df_equipe_norm = df_equipe_normalisation(df_equipe)
-
-    trouves, non_trouves = df_verification_existance(df_etud_norm, df_equipe_norm)
-    non_trouves = suggere_etudiant_par_nom(non_trouves, df_etud_norm)
-    noms_non_concord = noms_non_concordants(df_etud_norm, df_equipe_norm)
-
-    # Écriture dans un fichier Excel avec quatre feuilles
-    with pd.ExcelWriter("correction_manuelle_resultat.xlsx") as writer:
-        df_etud_norm.to_excel(writer, sheet_name="etudiants", index=False)
-        trouves.to_excel(writer, sheet_name="trouves", index=False)
-        non_trouves.to_excel(writer, sheet_name="non_trouves", index=False)
-        noms_non_concord.to_excel(writer, sheet_name="noms_non_concordants", index=False)
-    
-
-
-    
-
-
-if __name__ == "__main__":
-    correction_manuelle()
-    print("Analyse terminée, les résultats sont dans le fichier 'correction_manuelle_resultat.xlsx'.")
+    except ValueError as e:
+        raise ValueError(f"Erreur lors du nettoyage du fichier d'équipe : {e}")

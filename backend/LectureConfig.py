@@ -150,7 +150,7 @@ def get_liste_uex():
 
 
 
-def get_name_mariage():
+def get_name_mariages():
     position = lignes[7].find(':')  # Trouve la position du caractère ':'
     if position == -1:
         raise ValueError("La huitième ligne du fichier Configuration.txt doit contenir un ':' pour séparer le nom du fichier mariage")
