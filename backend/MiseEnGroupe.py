@@ -1,4 +1,4 @@
-from ReconstructionPostVerif import get_liste_equipes, get_etudiant_not_in_equipes
+import ReconstructionPostVerif as rpv
 import pandas as pd
 from math import inf
 from ortools.sat.python import cp_model
@@ -6,7 +6,6 @@ from ortools.sat.python import cp_model
 from Tools import normaliser_colonne_texte
 import LectureConfig as lc
 import Classes
-from LectureFichierMariages import get_UEX_groupes
 
 import LectureFichierMariages as lfm
 
@@ -371,22 +370,25 @@ def appliquer_affectation(equipes, groupes, affectation):
 
 
 
-def fonction_main():
+def fonction_main(chemin_fichier_correction, df_mariages_groupes, df_mariages_UEX):
     """Fonction principale pour la mise en groupe des étudiants avec OR-Tools."""
-    
+
+    df_etud_ref, df_etud_trouves, df_etud_non_trouves = rpv.recuperer_correction_manuelle(chemin_fichier_correction)
+
+
     # Création des structures de données
-    liste_groupes = lfm.creation_des_groupes()
-    goupe_bioint = lfm.creation_groupe_bioint()
-    liste_groupes_avec_bioint = liste_groupes + [goupe_bioint]
+    liste_groupes = lfm.creation_des_groupes(df_mariages_groupes)
+    groupe_bioint = lfm.creation_groupe_bioint()
+    liste_groupes_avec_bioint = liste_groupes + [groupe_bioint]
+
+    liste_mariages = lfm.creation_des_mariages(liste_groupes_avec_bioint, df_mariages_UEX)
+    lfm.enlever_bioint_mariage(liste_mariages, df_mariages_groupes)
     
-    liste_mariages = lfm.creation_des_mariages(liste_groupes_avec_bioint)
-    lfm.enlever_bioint_mariage(liste_mariages)
-    
-    liste_equipes = get_liste_equipes()
-    liste_etudiants = get_etudiant_not_in_equipes(liste_equipes)
+    liste_equipes = rpv.get_liste_equipes(df_etud_ref, df_etud_trouves, df_etud_non_trouves)
+    liste_etudiants = rpv.get_etudiant_not_in_equipes(liste_equipes, df_etud_ref)
     liste_etudiants = liste_etudiants_to_liste_equipes(liste_etudiants)
-    
-    liste_equipes_complete = liste_etudiants + liste_equipes 
+
+    liste_equipes_complete = liste_etudiants + liste_equipes
     # liste_equipes_complete, liste_equipes_valide = liste_equipes_pop_valide(liste_equipes_complete)
     
     # Recherche de solution parfaite avec augmentation adaptative

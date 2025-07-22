@@ -1,11 +1,7 @@
 import pandas as pd
-import LectureConfig as lc
 from AnalyseDesFichiers import liste_UEX
 from Tools import normaliser_colonne_texte
 
-
-# Lecture de la configuration
-nom_fichier_etudiants = lc.get_name_fichier_etudiants()
 
 # Liste des colonnes à selectionner
 df_etudiants_colonnes = ["N°", "NOM", "PRENOM","UEX"]
@@ -13,13 +9,13 @@ df_etudiants_colonnes = ["N°", "NOM", "PRENOM","UEX"]
 # Chargement du fichier Excel avec les colonnes spécifiées
 # Utilisation de `header=0` pour indiquer que la première ligne contient les noms
 
-def get_df_etudiants():
+def get_df_etudiants(file_path):
     try:
-        return pd.read_excel(nom_fichier_etudiants, header=0, usecols=df_etudiants_colonnes)
+        return pd.read_excel(file_path, header=0, usecols=df_etudiants_colonnes)
     except ValueError:
-        raise ValueError(f"Le fichier {nom_fichier_etudiants} ne contient pas les colonnes requises : {df_etudiants_colonnes}")
+        raise ValueError(f"Le fichier {file_path} ne contient pas les colonnes requises : {df_etudiants_colonnes}")
 
-def df_etudiants_clean_types(df):
+def df_etudiants_clean(df):
     # Convertit les colonnes spécifiques en types appropriés, les nombres sont des entiers
     df_copie = df.copy()  # Crée une copie du DataFrame pour éviter de modifier l'original
 
@@ -27,7 +23,7 @@ def df_etudiants_clean_types(df):
     mask_num = ~df_copie['N°'].apply(lambda x: pd.api.types.is_integer(x) or (isinstance(x, float) and x.is_integer()))
     if mask_num.any():
         lignes_erreur = df_copie[mask_num]
-        raise ValueError(f"Il y a un problème dans les numéros d'étudiants, du fichier {nom_fichier_etudiants}, lignes en erreur :\n{lignes_erreur}")
+        raise ValueError(f"Il y a un problème dans les numéros d'étudiants, du fichier des étudiants, lignes en erreur :\n{lignes_erreur}")
 
     df_copie['N°'] = df_copie['N°'].astype(int)  # Convertit en entier
 
@@ -52,7 +48,7 @@ def df_etudiants_add_column_index(df):
 
 
 def df_etudiants_normalisation(df_etudiants):
-    df_etudiants = df_etudiants_clean_types(df_etudiants)
+    df_etudiants = df_etudiants_clean(df_etudiants)
     df_out = df_etudiants.copy()
     df_out['NOM'] = normaliser_colonne_texte(df_out['NOM'])
     df_out['PRENOM'] = normaliser_colonne_texte(df_out['PRENOM'])

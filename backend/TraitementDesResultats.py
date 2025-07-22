@@ -3,11 +3,6 @@ import Classes
 import pandas as pd
 import MiseEnGroupe as MEG
 
-resultat = fonction_main()
-
-
-nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages = resultat
-
 
 def liste_groupes_to_liste_EtudiantEnPlace(liste_groupes):
     liste_etudiants_en_place = []
@@ -32,7 +27,7 @@ def trie_liste_EtudiantEnPlace(liste_etudiants_en_place):
     return sorted(liste_etudiants_en_place, key= lambda etudiant: etudiant.get_index_etud())
 
 
-def liste_EtudiantEnPlace_to_df(liste_etudiants_en_place):
+def liste_EtudiantEnPlace_to_df(liste_etudiants_en_place, liste_mariages):
     data = {
         'Index': [etudiant.get_index_etud() for etudiant in liste_etudiants_en_place],
         'Numéro étudiant': [etudiant.get_numero_etudiant() for etudiant in liste_etudiants_en_place],
@@ -42,7 +37,7 @@ def liste_EtudiantEnPlace_to_df(liste_etudiants_en_place):
         'Valide': [etudiant.get_valide() for etudiant in liste_etudiants_en_place],
         'Groupe': [etudiant.get_groupe() for etudiant in liste_etudiants_en_place],
         'Équipe': [etudiant.get_equipe() if etudiant.get_equipe() > 0 else pd.NA for etudiant in liste_etudiants_en_place],
-        'Mariage': [_determiner_mariage_etudiant(etudiant) for etudiant in liste_etudiants_en_place]
+        'Mariage': [_determiner_mariage_etudiant(etudiant,liste_mariages) for etudiant in liste_etudiants_en_place]
     }
     return pd.DataFrame(data)
 
@@ -102,7 +97,7 @@ def ecrire_resultats_excel(df_etudiants_en_place, df_mariages, df_groupes):
 
 
 
-def _determiner_mariage_etudiant(etudiant):
+def _determiner_mariage_etudiant(etudiant, liste_mariages):
     """
     Détermine quel mariage correspond à un étudiant en fonction de son UEX et de son groupe.
     """
@@ -122,19 +117,19 @@ def _determiner_mariage_etudiant(etudiant):
     
     return pd.NA
 
-if __name__ == "__main__":
+def exporter_resultats(resultat):
     try:
+        nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages = resultat
+
         if resultat and resultat[0] is not None:  # Succès
             liste_etudiants_en_place = liste_groupes_to_liste_EtudiantEnPlace(liste_groupes)
             liste_etudiants_en_place = trie_liste_EtudiantEnPlace(liste_etudiants_en_place)
-            df_etudiants_en_place = liste_EtudiantEnPlace_to_df(liste_etudiants_en_place)
+            df_etudiants_en_place = liste_EtudiantEnPlace_to_df(liste_etudiants_en_place, liste_mariages)
             
             df_mariages = liste_mariages_to_df(liste_mariages)
             df_groupes = liste_groupes_to_df(liste_groupes)
 
             ecrire_resultats_excel(df_etudiants_en_place, df_mariages, df_groupes)
-            print("Résultats écrits dans 'resultats_mise_en_groupe.xlsx'")
-        else:
-            print("Aucun résultat à écrire.")
+
     except Exception as e:
         print(f"Erreur lors de l'écriture des résultats : {str(e)}")

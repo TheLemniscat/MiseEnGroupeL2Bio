@@ -1,9 +1,5 @@
 import pandas as pd
-import LectureConfig as lc
 from Tools import normaliser_colonne_texte
-
-# Lecture de la configuration
-nom_fichier_equipe = lc.get_name_fichier_equipe()
 
 # Liste des colonnes à selectionner
 df_equipe_colonnes = ["N°Obs","1. UE optionnelle du S3 commune",
@@ -13,25 +9,24 @@ df_equipe_colonnes = ["N°Obs","1. UE optionnelle du S3 commune",
                 "9. Numéro d'étudiant (4)",	"10. _Nom et prénom (4)"
 ]
 
-def get_df_equipe(file_path):    
-    nom_fichier_equipe = file_path
+def get_df_equipes(file_path):    
     try:
-        return pd.read_excel(nom_fichier_equipe, header=0, usecols=df_equipe_colonnes)
+        return pd.read_excel(file_path, header=0, usecols=df_equipe_colonnes)
     except ValueError as e:
         # Vérifie quelles colonnes manquent
         try:
-            cols_in_file = pd.read_excel(nom_fichier_equipe, header=0, nrows=0).columns.tolist()
+            cols_in_file = pd.read_excel(file_path, header=0, nrows=0).columns.tolist()
         except Exception:
-            raise ValueError(f"Impossible de lire les colonnes du fichier {nom_fichier_equipe}. Erreur d'origine : {e}")
+            raise ValueError(f"Impossible de lire les colonnes du fichier {file_path}. Erreur d'origine : {e}")
         missing = [col for col in df_equipe_colonnes if col not in cols_in_file]
         if missing:
-            raise ValueError(f"Le fichier {nom_fichier_equipe} ne contient pas les colonnes requises : {missing}")
+            raise ValueError(f"Le fichier {file_path} ne contient pas les colonnes requises : {missing}")
         else:
-            raise ValueError(f"Le fichier {nom_fichier_equipe} ne contient pas les colonnes requises : {df_equipe_colonnes}") from e
+            raise ValueError(f"Le fichier {file_path} ne contient pas les colonnes requises : {df_equipe_colonnes}") from e
 
 
 
-def df_equipe_clean(df):
+def df_equipes_clean(df):
     df_copie = df.copy()
     df_copie.columns = [
         "NUMERO EQUIPE",
@@ -62,7 +57,7 @@ def df_equipe_clean(df):
             if mask_invalid.any():
                 lignes_erreur = df_copie[mask_invalid]
                 raise ValueError(
-                    f"[PROBLÈME] Dans la colonne {col_num} du fichier {nom_fichier_equipe}, "
+                    f"[PROBLÈME] Dans la colonne {col_num} du fichier des équipes, "
                     f"les numéros doivent être des entiers à 8 chiffres. Lignes en erreur :\n{lignes_erreur}\n"
                 )
             df_copie[col_num] = df_copie[col_num].apply(lambda x: int(float(x)) if not pd.isna(x) else -1)
@@ -145,7 +140,7 @@ def df_equipe_clean(df):
             if mask_invalid.any():
                 lignes_erreur = df[mask_invalid]
                 raise ValueError(
-                    f"[PROBLÈME] Dans la colonne {col_nom_prenom} du fichier {nom_fichier_equipe}, "
+                    f"[PROBLÈME] Dans la colonne {col_nom_prenom} du fichier des équipes, "
                     f"les noms et prénoms ne doivent pas contenir de chiffres. Lignes en erreur :\n{lignes_erreur}\n"
                 )
 
@@ -164,7 +159,7 @@ def df_equipe_clean(df):
 
 
 
-def df_equipe_split_names(df):
+def df_equipes_split_names(df):
     # Sépare les noms et prénoms en deux colonnes distinctes, est utilisé après que les colonnes soient renommées
     df_copie = df.copy()  # Crée une copie du DataFrame pour éviter de modifier l'original
     for i in range(1, 5):
@@ -179,9 +174,9 @@ def df_equipe_split_names(df):
 
 
 
-def df_equipe_normalisation(df):
+def df_equipes_normalisation(df):
     df_copie = df.copy()
-    df_copie = df_equipe_clean(df_copie)
+    df_copie = df_equipes_clean(df_copie)
 
 
     liste_etudiants = []
@@ -206,11 +201,11 @@ def netoyage_fichier_equipe(file_path):
     Nettoie le fichier d'équipe en supprimant les lignes vides et les doublons.
     """
     try:
-        df_equipe = get_df_equipe(file_path)
-        df_equipe = df_equipe_clean(df_equipe)
-        df_equipe = df_equipe_normalisation(df_equipe)
-        df_equipe = df_equipe_split_names(df_equipe)
-    
+        df_equipe = get_df_equipes(file_path)
+        df_equipe = df_equipes_clean(df_equipe)
+        df_equipe = df_equipes_normalisation(df_equipe)
+        df_equipe = df_equipes_split_names(df_equipe)
+
         return df_equipe.reset_index(drop=True)
     
     except ValueError as e:

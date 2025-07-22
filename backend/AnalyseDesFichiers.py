@@ -96,14 +96,20 @@ def suggere_etudiant_par_nom(non_trouves, df_etud_norm):
     return non_trouves
 
 
-def correction_manuelle():
-    df_etudiants = lfe.get_df_etudiants()
+def correction_manuelle(df_etudiants, df_equipes):
+    """
+    Génère le fichier de correction manuelle en utilisant les DataFrames fournis.
+    Args:
+        df_etudiants: DataFrame des étudiants déjà nettoyé
+        df_equipes: DataFrame des équipes déjà nettoyé
+    """
     df_etudiants = lfe.df_etudiants_add_column_index(df_etudiants)
 
-    df_equipe = lft.get_df_equipe(lc.get_name_fichier_equipe())
+    # Utiliser le DataFrame fourni au lieu de relire le fichier
+    # df_equipes = lft.get_df_equipes(lc.get_name_fichier_equipe())  # ← Ligne problématique commentée
     
     df_etud_norm = lfe.df_etudiants_normalisation(df_etudiants)
-    df_equipe_norm = lft.df_equipe_normalisation(df_equipe)
+    df_equipe_norm = lft.df_equipes_normalisation(df_equipes)
 
     trouves, non_trouves = df_verification_existance(df_etud_norm, df_equipe_norm)
     non_trouves = suggere_etudiant_par_nom(non_trouves, df_etud_norm)
@@ -117,10 +123,3 @@ def correction_manuelle():
         noms_non_concord.to_excel(writer, sheet_name="noms_non_concordants", index=False)
     
 
-
-    
-
-
-if __name__ == "__main__":
-    correction_manuelle()
-    print("Analyse terminée, les résultats sont dans le fichier 'correction_manuelle_resultat.xlsx'.")

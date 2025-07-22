@@ -9,49 +9,101 @@ liste_uex = lc.get_liste_uex()
 liste_uex_majuscule = [uex.upper() for uex in liste_uex]
 
 
-nom_fichier_mariages = lc.get_name_mariages()
-nombre_groupes = lc.get_nombre_groupes()
+def get_dfs_mariages(file_path):
+    """
+    Lit le fichier des mariages et retourne un DataFrame.
+    """
+    try:
+        df_mariages_groupes = pd.read_excel(file_path, sheet_name=0)
+        df_mariages_UEX = pd.read_excel(file_path, sheet_name=1)
+        return df_mariages_UEX, df_mariages_groupes
+    except Exception as e:
+        raise ValueError(f"Le fichier {file_path} ne peut pas être lu. Vérifiez qu'il contient 2 feuilles Excel.") from e
 
 
-def get_nombre_groupes():
+def df_mariages_groupes_clean(df_mariages_groupes):
     """
-    Retourne le nombre de groupes à créer.
+    Nettoie le DataFrame des groupes des mariages.
     """
+    df_copie = df_mariages_groupes.copy()
     
-    df_UEX_groupes = pd.read_excel(nom_fichier_mariages, sheet_name=0, header=0)
-    print(len(df_UEX_groupes[0])-1) # Pour ne pas compter les bioint   
-
-
-print(f"Nombre de groupes : {get_nombre_groupes()}")
-
-
-def get_UEX_groupes():
-    """
-    Retourne un df qui contient les UEX des groupes.
-    """
-    df_UEX_groupes = pd.read_excel(nom_fichier_mariages, sheet_name=0, header=0)
-    df_UEX_groupes['Groupes'] = normaliser_colonne_texte(df_UEX_groupes['Groupes'])
-
+    # Vérifier que la colonne 'Groupes' existe
+    if 'Groupes' not in df_copie.columns:
+        raise ValueError("La feuille des groupes doit contenir une colonne 'Groupes'")
+    
+    df_copie['Groupes'] = normaliser_colonne_texte(df_copie['Groupes'])
 
     def normaliser_UEX_groupe(df_UEX):
         try: 
             int(df_UEX)
             return int(df_UEX)
-        except ValueError:
+        except (ValueError, TypeError):
             return not pd.isna(df_UEX)
 
     for uex in liste_uex_majuscule:
-        df_UEX_groupes[uex] = df_UEX_groupes[uex].apply(normaliser_UEX_groupe)
+        if uex in df_copie.columns:
+            df_copie[uex] = df_copie[uex].apply(normaliser_UEX_groupe)
 
-    return df_UEX_groupes
+    return df_copie
+
+def df_mariages_UEX_clean(df_mariages_UEX):
+    """
+    Nettoie le DataFrame des UEX des mariages.
+    """
+    df_copie = df_mariages_UEX.copy()
+
+    liste_cardinal = ['PREMIER', 'DEUXIEME', 'TROISIEME']
+    
+    try:
+        # Vérifier que les colonnes requises existent
+        missing_cols = [col for col in liste_cardinal if col not in df_copie.columns]
+        if missing_cols:
+            raise ValueError(f"Colonnes manquantes dans la feuille UEX: {missing_cols}")
+        
+        for col in liste_cardinal:        
+            df_copie[col] = normaliser_colonne_texte(df_copie[col])
+        
+        for uex in liste_uex_majuscule:
+            if uex in df_copie.columns:
+                df_copie[uex] = df_copie[uex].apply(lambda x: not pd.isna(x))
+            
+    except Exception as e:
+        raise ValueError(f"Erreur lors du nettoyage de la feuille UEX: {str(e)}") from e
+
+    return df_copie
 
 
-def creation_des_groupes():
+
+def dfs_mariages_clean(df_mariages_UEX, df_mariages_groupes):
+    """
+    Nettoie les DataFrames des mariages.
+    """
+    df_mariages_UEX = df_mariages_UEX_clean(df_mariages_UEX)
+    df_mariages_groupes = df_mariages_groupes_clean(df_mariages_groupes)
+
+    return df_mariages_UEX, df_mariages_groupes
+
+
+def get_nombre_groupes(df_mariages_groupes):
+    """
+    Retourne le nombre de groupes à créer.
+    """
+    # Exclure la ligne 'bioint' si elle existe
+    if 'Groupes' in df_mariages_groupes.columns:
+        groupes_sans_bioint = df_mariages_groupes[df_mariages_groupes['Groupes'] != 'bioint']
+        return len(groupes_sans_bioint)
+    else:
+        # Si pas de colonne 'Groupes', compter toutes les lignes sauf la dernière (supposée être bioint)
+        return len(df_mariages_groupes) - 1   
+
+
+
+
+def creation_des_groupes(df_mariages_groupes):
     """
     Crée les groupes à partir de la liste des étudiants et de la taille des groupes.
     """
-    df_UEX_groupes = get_UEX_groupes()
-
+    nombre_groupes = get_nombre_groupes(df_mariages_groupes)
 
     groupes_liste = []
     for i in range(nombre_groupes):
@@ -59,13 +111,18 @@ def creation_des_groupes():
 
         numero_groupe = i + 1
         nom_groupe = f"groupe {numero_groupe}"
-        uex_groupe = [uex for uex in liste_uex_majuscule if df_UEX_groupes.loc[i, uex]]
+        
+        # Obtenir les UEX pour ce groupe
+        uex_groupe = []
+        for uex in liste_uex_majuscule:
+            if uex in df_mariages_groupes.columns:
+                if i < len(df_mariages_groupes) and not pd.isna(df_mariages_groupes.iloc[i][uex]) and df_mariages_groupes.iloc[i][uex]:
+                    uex_groupe.append(uex)
 
         # Création de l'objet Groupe
-        groupe = Classes.Groupe(numero_groupe,nom_groupe, liste_equipes, uex_groupe)
+        groupe = Classes.Groupe(numero_groupe, nom_groupe, liste_equipes, uex_groupe)
         
         groupes_liste.append(groupe)
-
 
     return groupes_liste
 
@@ -73,51 +130,54 @@ def creation_des_groupes():
 def creation_groupe_bioint():
     return Classes.Groupe(-1,'bioint', [], liste_uex_majuscule)
 
-def get_bioint_liste():
+def get_bioint_liste(df_mariages_groupes):
     """
     Retourne la liste des UEX bioint.
     """
-    df_UEX_groupes = get_UEX_groupes()
-    
     try:
-        row = df_UEX_groupes.loc[df_UEX_groupes['Groupes'] == 'bioint'].iloc[0]
-    
-    except IndexError:
-        raise ValueError("Le groupe 'bioint' n'a pas été trouvé dans la configuration des mariage.")
+        # Chercher la ligne avec 'bioint' (insensible à la casse)
+        mask = df_mariages_groupes['Groupes'].str.lower() == 'bioint'
+        if not mask.any():
+            # Essayer aussi 'BioInt'
+            mask = df_mariages_groupes['Groupes'].str.lower() == 'bioint'
+        
+        if not mask.any():
+            raise ValueError("Le groupe 'bioint' n'a pas été trouvé dans la configuration des mariages.")
+        
+        row = df_mariages_groupes.loc[mask].iloc[0]
+
+    except (IndexError, KeyError) as e:
+        raise ValueError("Le groupe 'bioint' n'a pas été trouvé dans la configuration des mariages.") from e
     
     bioint_liste = []
     for uex in liste_uex_majuscule:
-        if pd.isna(row[uex]):
-            continue
-        
-        if row[uex]:
+        if uex in row.index and not pd.isna(row[uex]) and row[uex]:
             bioint_liste.append(uex)
     
     return bioint_liste
 
 
-def creation_des_mariages(liste_groupes):
+def creation_des_mariages(liste_groupes, df_mariages_UEX):
     """ 
     Crée les mariages à partir de la liste des groupes et de la configuration des mariage.
     """
-    mariage = pd.read_excel(lc.get_name_mariages(), sheet_name=1, header=0)
-    
-    nombre_mariages = mariage.shape[0]
+
+    nombre_mariages = df_mariages_UEX.shape[0]
 
     liste_cardinal = ['PREMIER', 'DEUXIEME', 'TROISIEME']
     
     for col in liste_cardinal:        
-        mariage[col] = normaliser_colonne_texte(mariage[col])
+        df_mariages_UEX[col] = normaliser_colonne_texte(df_mariages_UEX[col])
     
     for uex in liste_uex_majuscule:
-        mariage[uex] = mariage[uex].apply(
+        df_mariages_UEX[uex] = df_mariages_UEX[uex].apply(
             lambda x: not pd.isna(x)
         )
     
 
     mariages_liste = []
     for i in range(nombre_mariages):
-        row = mariage.iloc[i]
+        row = df_mariages_UEX.iloc[i]
         
         membres = []
         
@@ -143,17 +203,20 @@ def creation_des_mariages(liste_groupes):
     return mariages_liste 
 
 
-def enlever_bioint_mariage(mariages_liste):
-    UEX_groupes = get_UEX_groupes()
-
+def enlever_bioint_mariage(mariages_liste, df_mariages_groupes):
     try:
-        row = UEX_groupes.loc[UEX_groupes['Groupes'] == 'bioint'].iloc[0]
-    
-    except IndexError:
-        raise ValueError("Le groupe 'bioint' n'a pas été trouvé dans la configuration des mariage.")
+        # Chercher la ligne avec 'bioint' (insensible à la casse)
+        mask = df_mariages_groupes['Groupes'].str.lower() == 'bioint'
+        if not mask.any():
+            raise ValueError("Le groupe 'bioint' n'a pas été trouvé dans la configuration des mariages.")
+        
+        row = df_mariages_groupes.loc[mask].iloc[0]
 
-    for i,uex in enumerate(liste_uex_majuscule):
-        if pd.isna(row[uex]):
+    except (IndexError, KeyError) as e:
+        raise ValueError("Le groupe 'bioint' n'a pas été trouvé dans la configuration des mariages.") from e
+
+    for i, uex in enumerate(liste_uex_majuscule):
+        if uex not in row.index or pd.isna(row[uex]):
             continue
         
         if row[uex]:
@@ -164,17 +227,20 @@ def enlever_bioint_mariage(mariages_liste):
                         mariage.set_bioint(row[uex])
 
 
-def ajouter_bioint_mariage(mariages_liste):
-    UEX_groupes = get_UEX_groupes()
-
+def ajouter_bioint_mariage(mariages_liste, df_mariages_groupes):
     try:
-        row = UEX_groupes.loc[UEX_groupes['Groupes'] == 'bioint'].iloc[0]
-    
-    except IndexError:
-        raise ValueError("Le groupe 'bioint' n'a pas été trouvé dans la configuration des mariage.")
+        # Chercher la ligne avec 'bioint' (insensible à la casse)
+        mask = df_mariages_groupes['Groupes'].str.lower() == 'bioint'
+        if not mask.any():
+            raise ValueError("Le groupe 'bioint' n'a pas été trouvé dans la configuration des mariages.")
+        
+        row = df_mariages_groupes.loc[mask].iloc[0]
 
-    for i,uex in enumerate(liste_uex_majuscule):
-        if pd.isna(row[uex]):
+    except (IndexError, KeyError) as e:
+        raise ValueError("Le groupe 'bioint' n'a pas été trouvé dans la configuration des mariages.") from e
+
+    for i, uex in enumerate(liste_uex_majuscule):
+        if uex not in row.index or pd.isna(row[uex]):
             continue
         
         if row[uex]:
@@ -184,3 +250,25 @@ def ajouter_bioint_mariage(mariages_liste):
                     if mariage.get_uex().upper() == uex:
                         new_taille_max = mariage.get_taille_max() - row[uex]
                         mariage.set_taille_max(new_taille_max)
+
+
+if __name__ == "__main__":
+    # Exemple d'utilisation
+    df_mariages_UEX, df_mariages_groupes = get_dfs_mariages('/home/thelemniscat/Documents/Projets/MiseEnGroupeL2Bio/data/MariageMiseEnGroupe.xlsx')
+    df_mariages_UEX, df_mariages_groupes = dfs_mariages_clean(df_mariages_UEX, df_mariages_groupes)
+
+    liste_groupes = creation_des_groupes(df_mariages_groupes)
+    bioint_liste = get_bioint_liste(df_mariages_groupes)
+    
+    groupe_bioint = creation_groupe_bioint()
+
+    
+    liste_groupes.append(groupe_bioint)
+
+    mariages_liste = creation_des_mariages(liste_groupes, df_mariages_UEX)
+    
+    enlever_bioint_mariage(mariages_liste, df_mariages_groupes)
+    
+    # Affichage des mariages
+    for mariage in mariages_liste:
+        print(mariage)  # Utilise la méthode __str__ de la classe Mariage

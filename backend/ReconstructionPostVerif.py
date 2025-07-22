@@ -9,29 +9,34 @@ import Classes
 
 
 """
-Recounstruit les équipes après la vérification des étudiants.
+Reconstruit les équipes après la vérification des étudiants.
 """
 
-nom_fichier_verifie = lc.get_name_fichier_verifie()
 nombre_groupes = lc.get_nombre_groupes()
 taille_groupes = lc.get_taille_groupes()
 nombre_uex = lc.get_nombre_uex()
 
-try:
-    df_etud_ref = pd.read_excel(nom_fichier_verifie, sheet_name='etudiants')
-    df_etud_trouves = pd.read_excel(nom_fichier_verifie, sheet_name='trouves')
-    df_etud_non_trouves = pd.read_excel(nom_fichier_verifie, sheet_name='non_trouves')
-except FileNotFoundError:
-    raise FileNotFoundError(f"Le fichier '{nom_fichier_verifie}' n'a pas été crée. Veuillez d'abord exécuter le script d'analyse des fichiers.")
+def recuperer_correction_manuelle(file_path):
+    try:
+        df_etud_ref = pd.read_excel(file_path, sheet_name='etudiants')
+        df_etud_trouves = pd.read_excel(file_path, sheet_name='trouves')
+        df_etud_non_trouves = pd.read_excel(file_path, sheet_name='non_trouves')
+
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Le fichier '{file_path}' n'a pas été crée. Veuillez d'abord exécuter le script d'analyse des fichiers.")
+
+    df_etud_non_trouves = supprimer_lignes_sans_index(df_etud_non_trouves)
+    df_etud_ref["UEX"] = normaliser_colonne_texte(df_etud_ref["UEX"])
+    df_etud_trouves["UEX"] = normaliser_colonne_texte(df_etud_trouves["UEX"])
+    df_etud_non_trouves["UEX"] = normaliser_colonne_texte(df_etud_non_trouves["UEX"])
+    
+    return df_etud_ref, df_etud_trouves, df_etud_non_trouves
 
 
 def supprimer_lignes_sans_index(df):
     return df[df['INDEX_ETUDIANT'].notna()]
 
-df_etud_non_trouves = supprimer_lignes_sans_index(df_etud_non_trouves)
-df_etud_ref["UEX"] = normaliser_colonne_texte(df_etud_ref["UEX"])
-df_etud_trouves["UEX"] = normaliser_colonne_texte(df_etud_trouves["UEX"])
-df_etud_non_trouves["UEX"] = normaliser_colonne_texte(df_etud_non_trouves["UEX"])
+
 
 def reconstruction_equipe_post_verif(df_etud_trouves, df_etud_non_trouve, df_etud_ref):
     # Combine les deux DataFrames
@@ -81,7 +86,7 @@ def verif_UEX(df_etud_ref, df_etud_reconstruits):
     
 
 
-def df_to_liste_equipes(df):
+def df_to_liste_equipes(df, df_etud_ref):
     """
     Regroupe les étudiants par numéro d'équipe.
     Retourne une liste d'objets Equipe, chaque équipe contenant des objets Etudiant.
@@ -286,7 +291,7 @@ def correction_equipe_liste_UEX(equipes_liste):
 
 
 
-def get_liste_equipes():
+def get_liste_equipes(df_etud_ref, df_etud_trouves, df_etud_non_trouves):
     """
     Retourne un dictionnaire des UEX et des étudiant associés.
     Chaque clé est une UEX et la valeur est une liste d'équipes.
@@ -297,7 +302,7 @@ def get_liste_equipes():
 
 
     df_reconstruction = reconstruction_equipe_post_verif(df_etud_trouves, df_etud_non_trouves, df_etud_ref) # Reconstruit le tableau des équipes après vérification
-    equipes_liste = df_to_liste_equipes(df_reconstruction) # Convertit le DataFrame en liste d'équipes
+    equipes_liste = df_to_liste_equipes(df_reconstruction, df_etud_ref) # Convertit le DataFrame en liste d'équipes
 
     equipes_corrigees = correction_equpie_liste(equipes_liste) # Corrige les équipes en supprimant les doublons et en normalisant les numéros d'équipe
     equipes_decoupees = decouper_equipes(equipes_corrigees) # Découpe les équipes en sous-équipes de taille maximale
@@ -305,7 +310,7 @@ def get_liste_equipes():
 
     return equipes_corrigees_uex
 
-def get_etudiant_not_in_equipes(equipes_liste):
+def get_etudiant_not_in_equipes(equipes_liste, df_etud_ref):
     """
     Retourne une liste d'objets Etudiant qui ne sont pas dans les équipes.
     """
@@ -331,15 +336,3 @@ def get_etudiant_not_in_equipes(equipes_liste):
     
     return etudiants_non_dans_equipes
     
-
-if __name__ == "__main__":
-    
-    try:
-        get_liste_equipes()
-
-    except ValueError as e:
-        print(f"Erreur de vérification des UEX : {e}")
-    except Exception as e:
-        print(f"Une erreur est survenue : {e}")
-    else:
-        print("Reconstruction des équipes réussie.")
