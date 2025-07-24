@@ -136,7 +136,7 @@ class Groupe:
 
 
 class Mariage:
-    taille_max = lc.get_taille_groupes() + 5 # Taille maximale des mariages
+    taille_max = lc.get_taille_groupes() # Taille maximale des mariages
 
     def __init__(self, numero:int, uex:str, groupes_liste:list[Groupe], bioint:int = 0):
         self.numero = numero
@@ -146,7 +146,7 @@ class Mariage:
         self.taille_max = self.taille_max
 
     def __str__(self):
-        return f"{', '.join(groupe.get_name() for groupe in self.groupes_liste)} : {self.uex}, taille max: {self.taille_max}"
+        return f"{', '.join(groupe.get_name() for groupe in self.groupes_liste)} : {self.uex}, taille max: {self.taille_max}, bioint: {self.bioint}"
     
     def init_uex(self,uex:str):
         """
@@ -164,9 +164,6 @@ class Mariage:
         return self.groupes_liste
     
     def get_taille_max(self):
-        return self.taille_max - self.bioint
-    
-    def get_taille_max_bioint(self):
         return self.taille_max
     
     def get_bioint(self):

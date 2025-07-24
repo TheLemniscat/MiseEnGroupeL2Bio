@@ -1,4 +1,5 @@
 Nombre de groupes : 8
 Taille des groupes : 32
+Taille maximale des groupes : 34
 Nombre d'UEX : 3
 Liste des UEX : BIO303, BIO304, BIO305

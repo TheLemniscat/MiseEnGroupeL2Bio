@@ -45,6 +45,9 @@ class InterfaceSelectionFichiers:
         self.valid_correction = tk.BooleanVar(value=False)
         self.correction_generee = tk.BooleanVar(value=False)
         
+        # Variable pour mémoriser les messages d'erreur persistants
+        self.message_erreur_persistant = None
+        
         self.creer_interface()
 
     
@@ -233,6 +236,8 @@ class InterfaceSelectionFichiers:
             if os.path.exists(chemin_fichier):
                 self.valid_correction.set(True)
                 self.label_status_correction.config(text="✅", fg="green")
+                # Effacer le message d'erreur persistant si validation réussie
+                self.message_erreur_persistant = None
                 self.label_info.config(
                     text=f"✅ Fichier de correction sélectionné: {os.path.basename(chemin_fichier)}",
                     fg="green"
@@ -242,16 +247,22 @@ class InterfaceSelectionFichiers:
             else:
                 self.valid_correction.set(False)
                 self.label_status_correction.config(text="❌", fg="red")
+                # Sauvegarder le message d'erreur pour qu'il persiste
+                error_msg = f"❌ Fichier de correction non trouvé: {os.path.basename(chemin_fichier)}"
+                self.message_erreur_persistant = error_msg
                 self.label_info.config(
-                    text=f"❌ Fichier de correction non trouvé: {os.path.basename(chemin_fichier)}",
+                    text=error_msg,
                     fg="red"
                 )
                 self.btn_mise_en_groupe.config(state="disabled")
         except Exception as e:
             self.valid_correction.set(False)
             self.label_status_correction.config(text="❌", fg="red")
+            # Sauvegarder le message d'erreur pour qu'il persiste
+            error_msg = f"❌ Erreur lors de la validation du fichier de correction: {str(e)}"
+            self.message_erreur_persistant = error_msg
             self.label_info.config(
-                text=f"❌ Erreur lors de la validation du fichier de correction: {str(e)}",
+                text=error_msg,
                 fg="red"
             )
             self.btn_mise_en_groupe.config(state="disabled")
@@ -264,13 +275,16 @@ class InterfaceSelectionFichiers:
                 var_valid.set(resultat)
                 
                 if resultat:
+                    # Effacer le message d'erreur persistant si validation réussie
+                    self.message_erreur_persistant = None
                     self.label_info.config(
                         text=f"✅ Fichier validé: {os.path.basename(chemin_fichier)}",
                         fg="green"
                     )
                 else:
-                    # Afficher l'erreur précise dans le cadre d'informations
+                    # Sauvegarder le message d'erreur pour qu'il persiste
                     error_msg = f"❌ Erreur dans {os.path.basename(chemin_fichier)}: {message_erreur}"
+                    self.message_erreur_persistant = error_msg
                     self.label_info.config(
                         text=error_msg,
                         fg="red"
@@ -280,8 +294,11 @@ class InterfaceSelectionFichiers:
                 
         except Exception as e:
             var_valid.set(False)
+            # Sauvegarder le message d'erreur pour qu'il persiste
+            error_msg = f"❌ Erreur lors de la validation: {str(e)}"
+            self.message_erreur_persistant = error_msg
             self.label_info.config(
-                text=f"❌ Erreur lors de la validation: {str(e)}",
+                text=error_msg,
                 fg="red"
             )
             messagebox.showerror("Erreur de validation", f"Erreur lors de la validation du fichier: {str(e)}")
@@ -391,18 +408,22 @@ class InterfaceSelectionFichiers:
             # Activer le bouton de génération de correction
             self.btn_generer.config(state="normal")
             if not self.correction_generee.get():
-                self.label_info.config(
-                    text="✅ Tous les fichiers sont valides. Cliquez sur 'Générer Fichier de Correction' pour continuer.",
-                    fg="green"
-                )
+                # Ne pas écraser le message d'erreur persistant
+                if not self.message_erreur_persistant:
+                    self.label_info.config(
+                        text="✅ Tous les fichiers sont valides. Cliquez sur 'Générer Fichier de Correction' pour continuer.",
+                        fg="green"
+                    )
         else:
             # Désactiver le bouton de génération
             self.btn_generer.config(state="disabled")
             if not self.correction_generee.get():
-                self.label_info.config(
-                    text="Sélectionnez les trois fichiers requis pour continuer.",
-                    fg="black"
-                )
+                # Ne pas écraser le message d'erreur persistant, mais afficher un message par défaut si aucune erreur
+                if not self.message_erreur_persistant:
+                    self.label_info.config(
+                        text="Sélectionnez les trois fichiers requis pour continuer.",
+                        fg="black"
+                    )
         
         # ÉTAPE 2 : Affichage conditionnel des sections suivantes
         if self.correction_generee.get():

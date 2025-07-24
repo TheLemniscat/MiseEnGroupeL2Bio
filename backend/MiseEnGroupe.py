@@ -33,89 +33,6 @@ def liste_etudiants_to_liste_equipes(liste_etudiants):
     """
     return [Classes.Equipe(-etudiant.get_index_etud(), [etudiant], etudiant.get_uex(), etudiant.get_valide()) for etudiant in liste_etudiants]
 
-def liste_equipes_pop_valide(liste_equipes):
-    """
-    Sépare les équipes qui ont validée des autres.
-    """
-    liste_non_valide = [equipe for equipe in liste_equipes if not equipe.get_valide()]
-    liste_valide = [equipe for equipe in liste_equipes if equipe.get_valide()]
-
-    return liste_non_valide, liste_valide
-
-
-
-
-def score_groupe(groupe):
-    """
-    Calcule le score d'un groupe. 
-    Le score est le pourcentage de remplissage du groupe.
-    """
-    return groupe.length() / groupe.get_taille_max()
-
-def score_mariage(mariage):
-    """
-    Calcule le score d'un mariage.
-    Le score est le pourcentage de remplissage du mariage.
-    """
-    return mariage.length() / mariage.get_taille_max()
-                            
-
-def mise_en_groupe_determinee(liste_groupe, liste_equipes):
-    """
-    Cherche les UEX qui ne sont que dans un seul groupe et ajoute les équpie et étudiant correspondants
-    """
-
-    for uex in liste_uex_majuscule:
-        count = 0
-        groupe_teste = None
-        for i, groupe in enumerate(liste_groupe):
-            if uex in groupe.get_uex_liste():
-                count += 1
-                groupe_teste = liste_groupe[i]
-
-        
-        if count == 1 and groupe_teste is not None:
-            groupe = groupe_teste
-            for equipe in liste_equipes:
-                if uex.lower() in equipe.get_uex():
-                    groupe.ajouter_equipe(equipe)
-                    liste_equipes.remove(equipe)
-
-
-def find_mariage_by_groupe(liste_mariages, groupe, uex):
-    """
-    Trouve le mariage auquel appartient le groupe.
-    """
-    for mariage in liste_mariages:
-        if groupe in mariage.get_groupes_liste():
-            if mariage.get_uex() == uex:
-                return mariage
-    return None
-
-def score_si_ajout_groupe(groupe, equipe):
-    """
-    Calcule le score d'un groupe si l'équipe est ajoutée.
-    """
-    new_lenght = groupe.length() + equipe.length()
-    if new_lenght > groupe.get_taille_max():
-        return inf
-    return new_lenght / groupe.get_taille_max()
-
-
-def score_si_ajout_mariage(liste_mariages, groupe, equipe):
-    """
-    Calcule le score d'un mariage si l'équipe est ajoutée.
-    """
-    mariage = find_mariage_by_groupe(liste_mariages, groupe, equipe.get_uex())
-    if mariage is None:
-        return 0
-    new_lenght = mariage.length() + equipe.length()
-    if new_lenght > mariage.get_taille_max():
-        return inf
-    return new_lenght / mariage.get_taille_max()
-
-
-
 
 def resoudre_affectation(equipes, groupes, mariages):
     """
@@ -190,7 +107,7 @@ def resoudre_affectation(equipes, groupes, mariages):
                         termes_mariage.append(x[cle] * equipe.length())
             
             if termes_mariage:  # Ajouter la contrainte seulement s'il y a des termes valides
-                model.Add(sum(termes_mariage) <= mariage.get_taille_max())
+                model.Add(sum(termes_mariage) <= mariage.get_taille_max() - mariage.get_bioint())
     
     # 4. FONCTION OBJECTIF (équilibrage des groupes)
     nb_etudiants_par_groupe = []
@@ -312,7 +229,7 @@ def recherche_solution_parfaite_adaptative(equipes, groupes, mariages, max_itera
         
         # Augmenter la taille des groupes pour la prochaine tentative
         if iteration < max_iterations:
-            if groupes[0].get_taille_max() < 34:  # Limite arbitraire pour éviter des tailles trop grandes
+            if groupes[0].get_taille_max() <= lc.get_taille_max_groupes():  # Limite la taille des groupes
                 for groupe in groupes:
                     if groupe.get_name() != 'bioint':  # Ne pas modifier bioint
                         nouvelle_taille = groupe.get_taille_max() + 1
@@ -382,18 +299,17 @@ def fonction_main(chemin_fichier_correction, df_mariages_groupes, df_mariages_UE
     liste_groupes_avec_bioint = liste_groupes + [groupe_bioint]
 
     liste_mariages = lfm.creation_des_mariages(liste_groupes_avec_bioint, df_mariages_UEX)
-    lfm.enlever_bioint_mariage(liste_mariages, df_mariages_groupes)
+    lfm.ajouter_bioint_mariage(liste_mariages, df_mariages_groupes)
     
     liste_equipes = rpv.get_liste_equipes(df_etud_ref, df_etud_trouves, df_etud_non_trouves)
     liste_etudiants = rpv.get_etudiant_not_in_equipes(liste_equipes, df_etud_ref)
     liste_etudiants = liste_etudiants_to_liste_equipes(liste_etudiants)
 
-    liste_equipes_complete = liste_etudiants + liste_equipes
-    # liste_equipes_complete, liste_equipes_valide = liste_equipes_pop_valide(liste_equipes_complete)
-    
+    liste_equipes_complete = randomiser_liste(liste_etudiants + liste_equipes)
+
     # Recherche de solution parfaite avec augmentation adaptative
     affectation, success = recherche_solution_parfaite_adaptative(
-        liste_equipes_complete, liste_groupes, liste_mariages, max_iterations=10
+        liste_equipes_complete, liste_groupes, liste_mariages, max_iterations=100
     )
 
     succes_application = appliquer_affectation(liste_equipes_complete, liste_groupes, affectation)

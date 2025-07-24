@@ -119,7 +119,7 @@ def correction_manuelle(df_etudiants, df_equipes):
     with pd.ExcelWriter("correction_manuelle_resultat.xlsx") as writer:
         df_etud_norm.to_excel(writer, sheet_name="etudiants", index=False)
         trouves.to_excel(writer, sheet_name="trouves", index=False)
-        non_trouves.to_excel(writer, sheet_name="non_trouves", index=False)
+        non_trouves.to_excel(writer, sheet_name="à modifier", index=False)
         noms_non_concord.to_excel(writer, sheet_name="noms_non_concordants", index=False)
     
 

@@ -20,12 +20,13 @@ def recuperer_correction_manuelle(file_path):
     try:
         df_etud_ref = pd.read_excel(file_path, sheet_name='etudiants')
         df_etud_trouves = pd.read_excel(file_path, sheet_name='trouves')
-        df_etud_non_trouves = pd.read_excel(file_path, sheet_name='non_trouves')
+        df_etud_non_trouves = pd.read_excel(file_path, sheet_name='à modifier')
 
     except FileNotFoundError:
         raise FileNotFoundError(f"Le fichier '{file_path}' n'a pas été crée. Veuillez d'abord exécuter le script d'analyse des fichiers.")
 
-    df_etud_non_trouves = supprimer_lignes_sans_index(df_etud_non_trouves)
+    if not trouver_les_lignes_sans_index(df_etud_non_trouves).empty:
+        raise ValueError("Il y a des étudiants dans le fichier de correction manuelle qui n'ont pas d'INDEX_ETUDIANT. Veuillez corriger cela avant de continuer.")
     df_etud_ref["UEX"] = normaliser_colonne_texte(df_etud_ref["UEX"])
     df_etud_trouves["UEX"] = normaliser_colonne_texte(df_etud_trouves["UEX"])
     df_etud_non_trouves["UEX"] = normaliser_colonne_texte(df_etud_non_trouves["UEX"])
@@ -33,8 +34,11 @@ def recuperer_correction_manuelle(file_path):
     return df_etud_ref, df_etud_trouves, df_etud_non_trouves
 
 
-def supprimer_lignes_sans_index(df):
-    return df[df['INDEX_ETUDIANT'].notna()]
+def trouver_les_lignes_sans_index(df):
+    """
+    Trouve les lignes du DataFrame qui n'ont pas d'INDEX_ETUDIANT.
+    """
+    return df[df['INDEX_ETUDIANT'].isna() | (df['INDEX_ETUDIANT'] == '')]
 
 
 

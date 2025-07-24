@@ -167,7 +167,6 @@ print('✅ Modules OK')
 - **Temps de traitement** : < 30 secondes pour 300 étudiants
 - **Taux de placement** : Généralement > 95%
 
-## 🤝 Contribution
 
 ### Structure de développement
 ```

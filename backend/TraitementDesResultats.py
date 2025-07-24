@@ -1,4 +1,3 @@
-from MiseEnGroupe import fonction_main
 import Classes
 import pandas as pd
 import MiseEnGroupe as MEG
@@ -37,7 +36,7 @@ def liste_EtudiantEnPlace_to_df(liste_etudiants_en_place, liste_mariages):
         'Valide': [etudiant.get_valide() for etudiant in liste_etudiants_en_place],
         'Groupe': [etudiant.get_groupe() for etudiant in liste_etudiants_en_place],
         'Équipe': [etudiant.get_equipe() if etudiant.get_equipe() > 0 else pd.NA for etudiant in liste_etudiants_en_place],
-        'Mariage': [_determiner_mariage_etudiant(etudiant,liste_mariages) for etudiant in liste_etudiants_en_place]
+        'Mariage': [determiner_mariage_etudiant(etudiant,liste_mariages) for etudiant in liste_etudiants_en_place]
     }
     return pd.DataFrame(data)
 
@@ -69,7 +68,8 @@ def liste_mariages_to_df(liste_mariages):
         'Groupe 3': troisieme,        
         'UEX': [mariage.get_uex() for mariage in liste_mariages],
         # Utilise une formule Excel pour compter les étudiants de chaque mariage
-        'Taille actuelle': [f'=COUNTIF(Etudiants!I:I,A{i+2})' for i in range(len(liste_mariages))]
+        'Taille sans bioint': [f'=COUNTIF(Etudiants!I:I,A{i+2})' for i in range(len(liste_mariages))],
+        'Taille avec bioint': [f'=COUNTIF(Etudiants!I:I,A{i+2}) + {mariage.get_bioint()}' for i, mariage in enumerate(liste_mariages)],
     }
     return pd.DataFrame(data)
 
@@ -97,7 +97,7 @@ def ecrire_resultats_excel(df_etudiants_en_place, df_mariages, df_groupes):
 
 
 
-def _determiner_mariage_etudiant(etudiant, liste_mariages):
+def determiner_mariage_etudiant(etudiant, liste_mariages):
     """
     Détermine quel mariage correspond à un étudiant en fonction de son UEX et de son groupe.
     """

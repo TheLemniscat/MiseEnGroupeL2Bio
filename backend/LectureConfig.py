@@ -32,6 +32,19 @@ def get_taille_groupes():
                 raise ValueError("La valeur après ':' dans la ligne 'Taille des groupes' doit être un entier") from None
     raise ValueError("Aucune ligne contenant 'Taille des groupes' trouvée dans le fichier Configuration.txt")
 
+def get_taille_max_groupes():
+    for i, ligne in enumerate(lignes):
+        if "Taille maximale des groupes" in ligne:
+            position = ligne.find(':')
+            if position == -1:
+                raise ValueError("La ligne 'Taille maximale des groupes' doit contenir un ':' pour séparer la valeur")
+            valeur = ligne[position+1:].strip()
+            try:
+                return int(valeur)
+            except ValueError:
+                raise ValueError("La valeur après ':' dans la ligne 'Taille maximale des groupes' doit être un entier") from None
+
+
 
 def get_nombre_uex():
     for i, ligne in enumerate(lignes):
