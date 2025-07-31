@@ -74,7 +74,7 @@ def liste_mariages_to_df(liste_mariages):
     return pd.DataFrame(data)
 
 
-def liste_groupes_to_df(liste_groupes):
+def liste_groupes_to_df(liste_groupes, liste_uex):
     data = {
         'Numéro': [groupe.get_numero() for groupe in liste_groupes],
         'Nom': [groupe.get_name() for groupe in liste_groupes],
@@ -82,7 +82,9 @@ def liste_groupes_to_df(liste_groupes):
         'Taille actuelle': [f'=COUNTIF(Etudiants!G:G,A{i+2})' for i in range(len(liste_groupes))],
     }
 
-    for uex in MEG.liste_uex_majuscule:
+    liste_uex_majuscule = [uex.upper() for uex in liste_uex]
+
+    for uex in liste_uex_majuscule:
         data[uex] = ['x' if uex in groupe.get_uex_liste() else pd.NA for groupe in liste_groupes]
 
     return pd.DataFrame(data)
@@ -117,7 +119,7 @@ def determiner_mariage_etudiant(etudiant, liste_mariages):
     
     return pd.NA
 
-def exporter_resultats(resultat):
+def exporter_resultats(resultat, liste_uex):
     try:
         nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages = resultat
 
@@ -127,7 +129,7 @@ def exporter_resultats(resultat):
             df_etudiants_en_place = liste_EtudiantEnPlace_to_df(liste_etudiants_en_place, liste_mariages)
             
             df_mariages = liste_mariages_to_df(liste_mariages)
-            df_groupes = liste_groupes_to_df(liste_groupes)
+            df_groupes = liste_groupes_to_df(liste_groupes, liste_uex)
 
             ecrire_resultats_excel(df_etudiants_en_place, df_mariages, df_groupes)
 

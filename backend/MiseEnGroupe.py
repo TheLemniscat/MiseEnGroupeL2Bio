@@ -1,6 +1,5 @@
 import ReconstructionPostVerif as rpv
 import pandas as pd
-from math import inf
 from ortools.sat.python import cp_model
 
 import LectureConfig as lc

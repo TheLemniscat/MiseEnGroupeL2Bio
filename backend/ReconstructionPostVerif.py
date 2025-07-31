@@ -2,7 +2,6 @@ import LectureConfig as lc
 import pandas as pd
 
 from Tools import normaliser_colonne_texte
-from collections import deque
 
 import Classes
 
@@ -12,9 +11,6 @@ import Classes
 Reconstruit les équipes après la vérification des étudiants.
 """
 
-nombre_groupes = lc.get_nombre_groupes()
-taille_groupes = lc.get_taille_groupes()
-nombre_uex = lc.get_nombre_uex()
 
 def recuperer_correction_manuelle(file_path):
     try:

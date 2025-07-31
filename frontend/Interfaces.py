@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
+import configparser
 import sys
-import os
+import os 
 
 # Fonction pour importer les modules backend de manière sûre
 def import_backend_module(module_name):
@@ -30,7 +31,7 @@ class InterfaceSelectionFichiers:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Système de Mise en Groupe - Sélection des Fichiers")
-        self.root.geometry("800x600")
+        self.root.geometry("850x700")
         
         # Variables pour stocker les chemins des fichiers
         self.fichier_etudiants = tk.StringVar()
@@ -44,6 +45,12 @@ class InterfaceSelectionFichiers:
         self.valid_mariages = tk.BooleanVar(value=False)
         self.valid_correction = tk.BooleanVar(value=False)
         self.correction_generee = tk.BooleanVar(value=False)
+        
+        # Variables pour les paramètres de configuration
+        self.nombre_groupes = tk.StringVar()
+        self.taille_groupes = tk.StringVar()
+        self.taille_max_groupes = tk.StringVar()
+        self.liste_uex = tk.StringVar()
         
         # Variable pour mémoriser les messages d'erreur persistants
         self.message_erreur_persistant = None
@@ -62,6 +69,54 @@ class InterfaceSelectionFichiers:
         )
         titre.grid(row=0, column=0, columnspan=4, pady=20)
         
+        # Section paramètres de configuration
+        frame_config = tk.LabelFrame(
+            self.root, 
+            text="⚙️ Paramètres de Configuration", 
+            font=("Arial", 12, "bold"),
+            padx=10, pady=10
+        )
+        frame_config.grid(row=1, column=0, columnspan=4, padx=20, pady=10, sticky="ew")
+        
+        # Première ligne : Bouton pour charger un fichier INI (centré)
+        btn_charger_ini = tk.Button(
+            frame_config,
+            text="📁 Charger fichier INI",
+            command=self.charger_fichier_ini,
+            font=("Arial", 10),
+            bg="#2196F3",
+            fg="white",
+            padx=10, pady=5
+        )
+        btn_charger_ini.grid(row=0, column=0, columnspan=6, padx=5, pady=5)
+        
+        # Deuxième ligne : Tous les champs numériques sur la même ligne
+        tk.Label(frame_config, text="Nombre de groupes:", font=("Arial", 10, "bold")).grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.entry_nb_groupes = tk.Entry(frame_config, textvariable=self.nombre_groupes, width=10, justify="center")
+        self.entry_nb_groupes.grid(row=1, column=1, padx=5, pady=5)
+        
+        tk.Label(frame_config, text="Taille des groupes:", font=("Arial", 10, "bold")).grid(row=1, column=2, padx=5, pady=5, sticky="w")
+        self.entry_taille_groupes = tk.Entry(frame_config, textvariable=self.taille_groupes, width=10, justify="center")
+        self.entry_taille_groupes.grid(row=1, column=3, padx=5, pady=5)
+        
+        tk.Label(frame_config, text="Taille max des groupes:", font=("Arial", 10, "bold")).grid(row=1, column=4, padx=5, pady=5, sticky="w")
+        self.entry_taille_max = tk.Entry(frame_config, textvariable=self.taille_max_groupes, width=10, justify="center")
+        self.entry_taille_max.grid(row=1, column=5, padx=5, pady=5)
+        
+        # Troisième ligne : Liste des UEX (sur toute la largeur)
+        tk.Label(frame_config, text="Liste des UEX (séparées par des virgules):", font=("Arial", 10, "bold")).grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="w")
+        self.entry_liste_uex = tk.Entry(frame_config, textvariable=self.liste_uex, width=50)
+        self.entry_liste_uex.grid(row=2, column=2, columnspan=4, padx=5, pady=5, sticky="ew")
+        
+        # Lier l'événement de modification pour convertir en majuscules
+        self.entry_liste_uex.bind('<KeyRelease>', self.convertir_uex_majuscules)
+        
+        # Configuration de la grille pour redimensionnement
+        frame_config.columnconfigure(2, weight=1)
+        frame_config.columnconfigure(3, weight=1)
+        frame_config.columnconfigure(4, weight=1)
+        frame_config.columnconfigure(5, weight=1)
+        
         # Section sélection de fichiers
         frame_fichiers = tk.LabelFrame(
             self.root, 
@@ -69,7 +124,7 @@ class InterfaceSelectionFichiers:
             font=("Arial", 12, "bold"),
             padx=10, pady=10
         )
-        frame_fichiers.grid(row=1, column=0, columnspan=4, padx=20, pady=10, sticky="ew")
+        frame_fichiers.grid(row=2, column=0, columnspan=4, padx=20, pady=10, sticky="ew")
         
         # Configuration des fichiers
         fichiers_config = [
@@ -113,7 +168,7 @@ class InterfaceSelectionFichiers:
             font=("Arial", 12, "bold"),
             padx=10, pady=10
         )
-        frame_info.grid(row=2, column=0, columnspan=4, padx=20, pady=10, sticky="ew")
+        frame_info.grid(row=3, column=0, columnspan=4, padx=20, pady=10, sticky="ew")
         
         self.label_info = tk.Label(
             frame_info, 
@@ -128,7 +183,7 @@ class InterfaceSelectionFichiers:
         
         # Section boutons d'action - Étape 1 : Génération du fichier de correction
         frame_actions1 = tk.Frame(self.root)
-        frame_actions1.grid(row=3, column=0, columnspan=4, pady=10)
+        frame_actions1.grid(row=4, column=0, columnspan=4, pady=10)
         
         # Bouton pour générer le fichier de correction
         self.btn_generer = tk.Button(
@@ -230,6 +285,67 @@ class InterfaceSelectionFichiers:
             self.fichier_correction.set(fichier)
             self.valider_fichier_correction(fichier)
     
+    def charger_fichier_ini(self):
+        """Charge un fichier INI et remplit les champs de configuration."""
+        fichier = filedialog.askopenfilename(
+            title="Sélectionner un fichier de configuration INI",
+            filetypes=[("Fichiers INI", "*.ini"), ("Tous les fichiers", "*.*")]
+        )
+        
+        if fichier:
+            try:
+                config = configparser.ConfigParser()
+                config.read(fichier)
+                
+                # Vérifier que la section Configuration existe
+                if 'Configuration' in config:
+                    section = config['Configuration']
+                    
+                    # Charger les valeurs si elles existent
+                    if 'nombre_groupes' in section:
+                        self.nombre_groupes.set(section['nombre_groupes'])
+                    
+                    if 'taille_groupes' in section:
+                        self.taille_groupes.set(section['taille_groupes'])
+                    
+                    if 'taille_max_groupes' in section:
+                        self.taille_max_groupes.set(section['taille_max_groupes'])
+                    
+                    if 'liste_uex' in section:
+                        # Convertir en majuscules et nettoyer les espaces
+                        uex_list = section['liste_uex'].upper().replace(' ', '')
+                        self.liste_uex.set(uex_list)
+                    
+                    messagebox.showinfo(
+                        "Succès", 
+                        f"✅ Configuration chargée depuis {os.path.basename(fichier)}"
+                    )
+                else:
+                    messagebox.showerror(
+                        "Erreur", 
+                        "Le fichier INI ne contient pas de section [Configuration]"
+                    )
+                    
+            except Exception as e:
+                messagebox.showerror(
+                    "Erreur", 
+                    f"Erreur lors du chargement du fichier INI:\n{str(e)}"
+                )
+    
+    def convertir_uex_majuscules(self, event):
+        """Convertit automatiquement la saisie des UEX en majuscules."""
+        current_value = self.liste_uex.get()
+        cursor_position = self.entry_liste_uex.index(tk.INSERT)
+        
+        # Convertir en majuscules
+        new_value = current_value.upper()
+        
+        # Mettre à jour la valeur si elle a changé
+        if new_value != current_value:
+            self.liste_uex.set(new_value)
+            # Restaurer la position du curseur
+            self.entry_liste_uex.icursor(cursor_position)
+    
     def valider_fichier_correction(self, chemin_fichier):
         """Valide le fichier de correction."""
         try:
@@ -302,6 +418,48 @@ class InterfaceSelectionFichiers:
                 fg="red"
             )
             messagebox.showerror("Erreur de validation", f"Erreur lors de la validation du fichier: {str(e)}")
+    
+    def valider_parametres_configuration(self):
+        """Valide les paramètres de configuration saisis."""
+        try:
+            # Vérifier que tous les champs sont remplis
+            if not all([
+                self.nombre_groupes.get().strip(),
+                self.taille_groupes.get().strip(), 
+                self.taille_max_groupes.get().strip(),
+                self.liste_uex.get().strip()
+            ]):
+                return False, "Tous les champs de configuration doivent être remplis"
+            
+            # Vérifier que les nombres sont des entiers positifs
+            try:
+                nb_groupes = int(self.nombre_groupes.get())
+                taille_groupes = int(self.taille_groupes.get())
+                taille_max = int(self.taille_max_groupes.get())
+                
+                if nb_groupes <= 0 or taille_groupes <= 0 or taille_max <= 0:
+                    return False, "Les nombres doivent être des entiers positifs"
+                
+                if taille_max < taille_groupes:
+                    return False, "La taille maximale doit être supérieure ou égale à la taille des groupes"
+                    
+            except ValueError:
+                return False, "Les valeurs numériques doivent être des entiers valides"
+            
+            # Vérifier la liste des UEX
+            uex_list = [uex.strip() for uex in self.liste_uex.get().split(',') if uex.strip()]
+            if len(uex_list) == 0:
+                return False, "Au moins une UEX doit être spécifiée"
+            
+            # Vérifier le format des UEX (optionnel - on peut être plus flexible)
+            for uex in uex_list:
+                if not uex or len(uex) < 3:
+                    return False, f"UEX invalide: '{uex}'. Les UEX doivent avoir au moins 3 caractères"
+            
+            return True, "Configuration valide"
+            
+        except Exception as e:
+            return False, f"Erreur lors de la validation: {str(e)}"
     
     def valider_fichier_etudiants(self, chemin_fichier):
         """Valide le fichier des étudiants."""
@@ -417,19 +575,22 @@ class InterfaceSelectionFichiers:
             else:
                 label_status.config(text="❌", fg="red")
         
-        # ÉTAPE 1 : Vérifier si tous les fichiers initiaux sont valides
+        # Vérifier la configuration
+        config_valide, message_config = self.valider_parametres_configuration()
+        
+        # ÉTAPE 1 : Vérifier si tous les fichiers initiaux sont valides ET la configuration
         tous_fichiers_valides = (self.valid_etudiants.get() and 
                                 self.valid_equipes.get() and 
                                 self.valid_mariages.get())
         
-        if tous_fichiers_valides:
+        if tous_fichiers_valides and config_valide:
             # Activer le bouton de génération de correction
             self.btn_generer.config(state="normal")
             if not self.correction_generee.get():
                 # Ne pas écraser le message d'erreur persistant
                 if not self.message_erreur_persistant:
                     self.label_info.config(
-                        text="✅ Tous les fichiers sont valides. Cliquez sur 'Générer Fichier de Correction' pour continuer.",
+                        text="✅ Tous les fichiers et la configuration sont valides. Cliquez sur 'Générer Fichier de Correction' pour continuer.",
                         fg="green"
                     )
         else:
@@ -438,19 +599,25 @@ class InterfaceSelectionFichiers:
             if not self.correction_generee.get():
                 # Ne pas écraser le message d'erreur persistant, mais afficher un message par défaut si aucune erreur
                 if not self.message_erreur_persistant:
-                    self.label_info.config(
-                        text="Sélectionnez les trois fichiers requis pour continuer.",
-                        fg="black"
-                    )
+                    if not config_valide:
+                        self.label_info.config(
+                            text=f"❌ Configuration invalide: {message_config}",
+                            fg="red"
+                        )
+                    elif not tous_fichiers_valides:
+                        self.label_info.config(
+                            text="Sélectionnez les trois fichiers requis et configurez les paramètres pour continuer.",
+                            fg="black"
+                        )
         
         # ÉTAPE 2 : Affichage conditionnel des sections suivantes
         if self.correction_generee.get():
             # Afficher la section de sélection du fichier de correction
-            self.frame_correction.grid(row=4, column=0, columnspan=4, padx=20, pady=10, sticky="ew")
+            self.frame_correction.grid(row=5, column=0, columnspan=4, padx=20, pady=10, sticky="ew")
             
             # Si un fichier de correction est sélectionné, afficher la section mise en groupe
             if self.valid_correction.get():
-                self.frame_actions2.grid(row=5, column=0, columnspan=4, pady=10)
+                self.frame_actions2.grid(row=6, column=0, columnspan=4, pady=10)
                 self.btn_mise_en_groupe.config(state="normal")
             else:
                 # Cacher la section mise en groupe si pas de fichier de correction
