@@ -1,5 +1,4 @@
 import pandas as pd
-from AnalyseDesFichiers import liste_UEX
 from Tools import normaliser_colonne_texte
 
 
@@ -15,7 +14,7 @@ def get_df_etudiants(file_path):
     except ValueError:
         raise ValueError(f"Le fichier {file_path} ne contient pas les colonnes requises : {df_etudiants_colonnes}")
 
-def df_etudiants_clean(df):
+def df_etudiants_clean(df, liste_UEX):
     # Convertit les colonnes spécifiques en types appropriés, les nombres sont des entiers
     df_copie = df.copy()  # Crée une copie du DataFrame pour éviter de modifier l'original
 
@@ -47,8 +46,8 @@ def df_etudiants_add_column_index(df):
     return df_copie
 
 
-def df_etudiants_normalisation(df_etudiants):
-    df_etudiants = df_etudiants_clean(df_etudiants)
+def df_etudiants_normalisation(df_etudiants, liste_UEX):
+    df_etudiants = df_etudiants_clean(df_etudiants, liste_UEX)
     df_out = df_etudiants.copy()
     df_out['NOM'] = normaliser_colonne_texte(df_out['NOM'])
     df_out['PRENOM'] = normaliser_colonne_texte(df_out['PRENOM'])

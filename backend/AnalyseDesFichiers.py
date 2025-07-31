@@ -7,9 +7,6 @@ import LectureFichierEquipes as lft
 
 from Tools import normaliser_colonne_texte
 
-liste_UEX = lc.get_liste_uex()
-
-
 
 """
 
@@ -96,7 +93,7 @@ def suggere_etudiant_par_nom(non_trouves, df_etud_norm):
     return non_trouves
 
 
-def correction_manuelle(df_etudiants, df_equipes):
+def correction_manuelle(df_etudiants, df_equipes, liste_UEX):
     """
     Génère le fichier de correction manuelle en utilisant les DataFrames fournis.
     Args:
@@ -108,7 +105,7 @@ def correction_manuelle(df_etudiants, df_equipes):
     # Utiliser le DataFrame fourni au lieu de relire le fichier
     # df_equipes = lft.get_df_equipes(lc.get_name_fichier_equipe())  # ← Ligne problématique commentée
     
-    df_etud_norm = lfe.df_etudiants_normalisation(df_etudiants)
+    df_etud_norm = lfe.df_etudiants_normalisation(df_etudiants, liste_UEX)
     df_equipe_norm = lft.df_equipes_normalisation(df_equipes)
 
     trouves, non_trouves = df_verification_existance(df_etud_norm, df_equipe_norm)

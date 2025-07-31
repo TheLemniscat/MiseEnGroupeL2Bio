@@ -308,26 +308,35 @@ class InterfaceSelectionFichiers:
         try:
             if 'lfe' not in backend_modules:
                 backend_modules['lfe'] = import_backend_module('LectureFichierEtudiants')
+            if 'lc' not in backend_modules:
+                backend_modules['lc'] = import_backend_module('LectureConfig')
+            
+            if backend_modules['lfe'] is None:
+                raise ImportError("Le module LectureFichierEtudiants n'a pas pu être importé.")
+            if backend_modules['lc'] is None:
+                raise ImportError("Le module LectureConfig n'a pas pu être importé.")
+
             
             if backend_modules['lfe']:
                 # Tester la lecture du fichier avec les fonctions existantes
                 df = backend_modules['lfe'].get_df_etudiants(chemin_fichier)
-                df_etudiants_clean = backend_modules['lfe'].df_etudiants_clean(df)
+                liste_UEX = backend_modules['lc'].get_liste_uex(chemin_fichier)
+                df_etudiants_clean = backend_modules['lfe'].df_etudiants_clean(df, liste_UEX)
                 return True, "Fichier valide"
             return False, "Module de lecture des étudiants non disponible"
         except Exception as e:
             # Retourner une erreur spécifique basée sur le type d'exception
             error_msg = str(e)
             if "colonnes requises" in error_msg:
-                return False, "Colonnes manquantes. Requis: N°, NOM, PRENOM, UEX. Vérifiez que la première ligne contient ces en-têtes."
+                return False, f"Colonnes manquantes. Requis: N°, NOM, PRENOM, UEX. Vérifiez que la première ligne contient ces en-têtes. Erreur : {error_msg}"
             elif "numéros d'étudiants" in error_msg:
-                return False, "Numéros d'étudiants invalides (doivent être des entiers). Vérifiez la colonne N°."
+                return False, f"Numéros d'étudiants invalides (doivent être des entiers). Vérifiez la colonne N°. Erreur : {error_msg}"
             elif "UEX" in error_msg or "liste_UEX" in error_msg:
-                return False, "Valeurs UEX invalides. Valeurs autorisées: BIO303, BIO304, BIO305 (ou leurs variantes VALIDÉ)."
+                return False, f"Valeurs UEX invalides. Valeurs autorisées: BIO303, BIO304, BIO305 (ou leurs variantes VALIDÉ). Erreur : {error_msg}"
             elif "FileNotFoundError" in str(type(e)):
-                return False, "Fichier non trouvé. Vérifiez le chemin du fichier."
+                return False, f"Fichier non trouvé. Vérifiez le chemin du fichier. Erreur : {error_msg}"
             elif "PermissionError" in str(type(e)):
-                return False, "Permission refusée. Fermez le fichier Excel s'il est ouvert."
+                return False, f"Permission refusée. Fermez le fichier Excel s'il est ouvert. Erreur : {error_msg}"
             else:
                 return False, f"Erreur technique: {error_msg}"
     
@@ -366,23 +375,32 @@ class InterfaceSelectionFichiers:
         try:
             if 'lfm' not in backend_modules:
                 backend_modules['lfm'] = import_backend_module('LectureFichierMariages')
+            if 'lc' not in backend_modules:
+                backend_modules['lc'] = import_backend_module('LectureConfig')
+            
+            if backend_modules['lfm'] is None:
+                raise ImportError("Le module LectureFichierMariages n'a pas pu être importé.")
+            if backend_modules['lc'] is None:
+                raise ImportError("Le module LectureConfig n'a pas pu être importé.")
                 
             if backend_modules['lfm']:
                 # Tester la lecture du fichier mariages
                 df_uex, df_groupes = backend_modules['lfm'].get_dfs_mariages(chemin_fichier)
-                df_uex_clean = backend_modules['lfm'].df_mariages_UEX_clean(df_uex)
-                df_groupes_clean = backend_modules['lfm'].df_mariages_groupes_clean(df_groupes)
+                liste_uex = backend_modules['lc'].get_liste_uex(chemin_fichier)
+                taille_max_groupes = backend_modules['lc'].get_taille_max_groupes(chemin_fichier)
+                df_uex_clean = backend_modules['lfm'].df_mariages_UEX_clean(df_uex, liste_uex)
+                df_groupes_clean = backend_modules['lfm'].df_mariages_groupes_clean(df_groupes, liste_uex)
                 return True, "Fichier valide"
             return False, "Module de lecture des mariages non disponible"
         except Exception as e:
             # Retourner une erreur spécifique basée sur le type d'exception
             error_msg = str(e)
             if "sheet_name" in error_msg or "feuille" in error_msg or "Worksheet" in error_msg:
-                return False, "Le fichier doit contenir exactement 2 feuilles Excel (Feuil1 et Feuil2)."
+                return False, error_msg
             elif "colonnes requises" in error_msg:
-                return False, "Structure du fichier mariages incorrecte. Vérifiez le format des données."
+                return False, error_msg
             elif "UEX" in error_msg:
-                return False, "Configuration UEX invalide. Vérifiez les valeurs dans les feuilles."
+                return False, error_msg
             elif "FileNotFoundError" in str(type(e)):
                 return False, "Fichier non trouvé. Vérifiez le chemin du fichier."
             elif "PermissionError" in str(type(e)):
@@ -520,7 +538,7 @@ class InterfaceSelectionFichiers:
                 "Répertoire de travail : {os.getcwd()}"
             )
 
-    def lancer_mise_en_groupe(self, chemin_fichier_correction, df_mariages_groupe, df_mariages_uex):
+    def lancer_mise_en_groupe(self, chemin_fichier_correction, chemin_fichier_configuration, df_mariages_groupe, df_mariages_uex):
         """Lance le processus de mise en groupe."""
         try:
             if 'MEG' not in backend_modules:
@@ -529,6 +547,7 @@ class InterfaceSelectionFichiers:
             if backend_modules['MEG']:
                 resultat = backend_modules['MEG'].fonction_main(
                     chemin_fichier_correction,
+                    chemin_fichier_configuration,
                     df_mariages_groupe,
                     df_mariages_uex
                 )
@@ -599,6 +618,8 @@ class InterfaceSelectionFichiers:
                 backend_modules['lfm'] = import_backend_module('LectureFichierMariages')
             if 'adf' not in backend_modules:
                 backend_modules['adf'] = import_backend_module('AnalyseDesFichiers')
+            if 'lc' not in backend_modules:
+                backend_modules['lc'] = import_backend_module('LectureConfig')
 
             # Récupérer les chemins des fichiers
             chemin_mariages = str(self.fichier_mariages.get())
@@ -613,13 +634,16 @@ class InterfaceSelectionFichiers:
                 raise ImportError("Le module LectureFichierMariages n'a pas pu être importé.")
             if backend_modules['adf'] is None:
                 raise ImportError("Le module AnalyseDesFichiers n'a pas pu être importé.")
+            if backend_modules['lc'] is None:
+                raise ImportError("Le module LectureConfig n'a pas pu être importé.")
 
             df_uex, df_groupes = backend_modules['lfm'].get_dfs_mariages(chemin_mariages)
-            df_uex_clean = backend_modules['lfm'].df_mariages_UEX_clean(df_uex) 
+            liste_uex = backend_modules['lc'].get_liste_uex(chemin_mariages)
+            df_uex_clean = backend_modules['lfm'].df_mariages_UEX_clean(df_uex,liste_uex) 
             df_groupe_clean = backend_modules['lfm'].df_mariages_groupes_clean(df_groupes)
 
             # Appeler la fonction de mise en groupe
-            self.lancer_mise_en_groupe(chemin_fichier_correction, df_groupe_clean, df_uex_clean)
+            self.lancer_mise_en_groupe(chemin_fichier_correction, chemin_mariages, df_groupe_clean, df_uex_clean)
         except Exception as e:
             messagebox.showerror(
                 "Erreur",

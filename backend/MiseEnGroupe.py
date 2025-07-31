@@ -3,21 +3,10 @@ import pandas as pd
 from math import inf
 from ortools.sat.python import cp_model
 
-from Tools import normaliser_colonne_texte
 import LectureConfig as lc
 import Classes
 
 import LectureFichierMariages as lfm
-
-
-taille_groupe = lc.get_taille_groupes()
-nombre_groupes = lc.get_nombre_groupes()
-
-
-
-
-liste_uex = lc.get_liste_uex()
-liste_uex_majuscule = [uex.upper() for uex in liste_uex]
 
 
 def randomiser_liste(liste):
@@ -201,7 +190,7 @@ def resoudre_affectation(equipes, groupes, mariages):
     
     return affectation, nb_etudiants_places
 
-def recherche_solution_parfaite_adaptative(equipes, groupes, mariages, max_iterations=100):
+def recherche_solution_parfaite_adaptative(equipes, groupes, mariages, taille_groupe_lim, max_iterations=100):
     """
     Recherche une solution parfaite en augmentant progressivement la taille des groupes.
     
@@ -229,7 +218,7 @@ def recherche_solution_parfaite_adaptative(equipes, groupes, mariages, max_itera
         
         # Augmenter la taille des groupes pour la prochaine tentative
         if iteration < max_iterations:
-            if groupes[0].get_taille_max() <= lc.get_taille_max_groupes():  # Limite la taille des groupes
+            if groupes[0].get_taille_max() <= taille_groupe_lim:  # Limite la taille des groupes
                 for groupe in groupes:
                     if groupe.get_name() != 'bioint':  # Ne pas modifier bioint
                         nouvelle_taille = groupe.get_taille_max() + 1
@@ -287,19 +276,26 @@ def appliquer_affectation(equipes, groupes, affectation):
 
 
 
-def fonction_main(chemin_fichier_correction, df_mariages_groupes, df_mariages_UEX):
+def fonction_main(chemin_fichier_correction, chemin_fichier_config, df_mariages_groupes, df_mariages_UEX):
     """Fonction principale pour la mise en groupe des étudiants avec OR-Tools."""
 
     df_etud_ref, df_etud_trouves, df_etud_non_trouves = rpv.recuperer_correction_manuelle(chemin_fichier_correction)
 
 
+    # Recupération de la taille limite des groupes
+    taille_groupe_lim = lc.get_taille_groupes(chemin_fichier_config)
+    liste_uex = lc.get_liste_uex(chemin_fichier_config)
+    taille_max_groupe = lc.get_taille_max_groupes(chemin_fichier_config)
+    taille_max_mariage = taille_max_groupe # Taille maximale des mariages, par défaut égale à la taille maximale des groupes
+
+
     # Création des structures de données
-    liste_groupes = lfm.creation_des_groupes(df_mariages_groupes)
-    groupe_bioint = lfm.creation_groupe_bioint()
+    liste_groupes = lfm.creation_des_groupes(df_mariages_groupes, liste_uex, taille_max_groupe)
+    groupe_bioint = lfm.creation_groupe_bioint(liste_uex, taille_max_groupe)
     liste_groupes_avec_bioint = liste_groupes + [groupe_bioint]
 
-    liste_mariages = lfm.creation_des_mariages(liste_groupes_avec_bioint, df_mariages_UEX)
-    lfm.ajouter_bioint_mariage(liste_mariages, df_mariages_groupes)
+    liste_mariages = lfm.creation_des_mariages(liste_groupes_avec_bioint, df_mariages_UEX, liste_uex, taille_max_mariage)
+    lfm.ajouter_bioint_mariage(liste_mariages, df_mariages_groupes, liste_uex)
     
     liste_equipes = rpv.get_liste_equipes(df_etud_ref, df_etud_trouves, df_etud_non_trouves)
     liste_etudiants = rpv.get_etudiant_not_in_equipes(liste_equipes, df_etud_ref)
@@ -309,7 +305,7 @@ def fonction_main(chemin_fichier_correction, df_mariages_groupes, df_mariages_UE
 
     # Recherche de solution parfaite avec augmentation adaptative
     affectation, success = recherche_solution_parfaite_adaptative(
-        liste_equipes_complete, liste_groupes, liste_mariages, max_iterations=100
+        liste_equipes_complete, liste_groupes, liste_mariages, taille_groupe_lim, max_iterations=100
     )
 
     succes_application = appliquer_affectation(liste_equipes_complete, liste_groupes, affectation)
@@ -323,3 +319,10 @@ def fonction_main(chemin_fichier_correction, df_mariages_groupes, df_mariages_UE
         return nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages
     else:
         return None, None, None, None, None
+    
+
+
+
+if __name__ == "__main__":
+    file_path = '/home/thelemniscat/Documents/Projets/MiseEnGroupeL2Bio/data/MariageMiseEnGroupe.xlsx'
+    
