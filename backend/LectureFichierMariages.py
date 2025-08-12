@@ -1,12 +1,7 @@
 import pandas as pd
-import LectureConfig as lc
 
-import Classes
-from Tools import normaliser_colonne_texte
-
-
-# liste_uex = lc.get_liste_uex()
-# liste_uex_majuscule = [uex.upper() for uex in liste_uex]
+from backend import Classes
+from backend import MyTools as mytools
 
 
 def get_dfs_mariages(file_path):
@@ -31,7 +26,7 @@ def df_mariages_groupes_clean(df_mariages_groupes, liste_uex):
     if 'Groupes' not in df_copie.columns:
         raise ValueError("La feuille des groupes doit contenir une colonne 'Groupes'")
     
-    df_copie['Groupes'] = normaliser_colonne_texte(df_copie['Groupes'])
+    df_copie['Groupes'] = mytools.normaliser_colonne_texte(df_copie['Groupes'])
 
     def normaliser_UEX_groupe(df_UEX):
         try: 
@@ -65,7 +60,7 @@ def df_mariages_UEX_clean(df_mariages_UEX, liste_uex):
             raise ValueError(f"Colonnes manquantes dans la feuille UEX: {missing_cols}")
         
         for col in liste_cardinal:        
-            df_copie[col] = normaliser_colonne_texte(df_copie[col])
+            df_copie[col] = mytools.normaliser_colonne_texte(df_copie[col])
 
         liste_uex_majuscule = [uex.upper() for uex in liste_uex]
 
@@ -178,7 +173,7 @@ def creation_des_mariages(liste_groupes, df_mariages_UEX, liste_uex, taille_max_
     liste_cardinal = ['PREMIER', 'DEUXIEME', 'TROISIEME']
     
     for col in liste_cardinal:        
-        df_mariages_UEX[col] = normaliser_colonne_texte(df_mariages_UEX[col])
+        df_mariages_UEX[col] = mytools.normaliser_colonne_texte(df_mariages_UEX[col])
 
     mariages_liste = []
     for i in range(nombre_mariages):

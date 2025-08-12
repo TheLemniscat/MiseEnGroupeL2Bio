@@ -2,36 +2,21 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
 import configparser
-import sys
 import os 
+import backend.LectureFichierEtudiants as lfe
+import backend.LectureFichierEquipes as lft  
+import backend.LectureFichierMariages as lfm
+import backend.AnalyseDesFichiers as adf
+import backend.MiseEnGroupe as meg
+import backend.TraitementDesResultats as tdr
 
-# Fonction pour importer les modules backend de manière sûre
-def import_backend_module(module_name):
-    """Importe un module backend spécifique de manière sécurisée."""
-    try:
-        # Ajouter le répertoire parent et le backend au path
-        parent_dir = os.path.dirname(os.path.dirname(__file__))
-        backend_dir = os.path.join(parent_dir, 'backend')
-        
-        if parent_dir not in sys.path:
-            sys.path.insert(0, parent_dir)
-        if backend_dir not in sys.path:
-            sys.path.insert(0, backend_dir)
 
-        # Importer le module spécifique
-        return __import__(module_name)
-        
-    except Exception as e:
-        return None
-
-# Variables globales pour les modules (chargés à la demande)
-backend_modules = {}
 
 class InterfaceSelectionFichiers:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Système de Mise en Groupe - Sélection des Fichiers")
-        self.root.geometry("850x700")
+        self.root.geometry("850x850")
         
         # Variables pour stocker les chemins des fichiers
         self.fichier_etudiants = tk.StringVar()
@@ -81,7 +66,7 @@ class InterfaceSelectionFichiers:
         # Première ligne : Bouton pour charger un fichier INI (centré)
         btn_charger_ini = tk.Button(
             frame_config,
-            text="📁 Charger fichier INI",
+            text="📁 Charger fichier de configuration",
             command=self.charger_fichier_ini,
             font=("Arial", 10),
             bg="#2196F3",
@@ -461,27 +446,36 @@ class InterfaceSelectionFichiers:
         except Exception as e:
             return False, f"Erreur lors de la validation: {str(e)}"
     
+    def get_parametres_configuration(self):
+        """Récupère les paramètres de configuration depuis l'interface."""
+        try:
+            # Convertir les valeurs numériques
+            nb_groupes = int(self.nombre_groupes.get())
+            taille_groupes = int(self.taille_groupes.get())
+            taille_max = int(self.taille_max_groupes.get())
+            
+            # Traiter la liste des UEX
+            uex_list = [uex.strip() for uex in self.liste_uex.get().split(',') if uex.strip()]
+            
+            return {
+                'nombre_groupes': nb_groupes,
+                'taille_groupes': taille_groupes,
+                'taille_max_groupes': taille_max,
+                'liste_uex': uex_list
+            }
+        except ValueError as e:
+            raise ValueError(f"Erreur dans les paramètres de configuration: {str(e)}")
+    
     def valider_fichier_etudiants(self, chemin_fichier):
         """Valide le fichier des étudiants."""
         try:
-            if 'lfe' not in backend_modules:
-                backend_modules['lfe'] = import_backend_module('LectureFichierEtudiants')
-            if 'lc' not in backend_modules:
-                backend_modules['lc'] = import_backend_module('LectureConfig')
-            
-            if backend_modules['lfe'] is None:
-                raise ImportError("Le module LectureFichierEtudiants n'a pas pu être importé.")
-            if backend_modules['lc'] is None:
-                raise ImportError("Le module LectureConfig n'a pas pu être importé.")
-
-            
-            if backend_modules['lfe']:
-                # Tester la lecture du fichier avec les fonctions existantes
-                df = backend_modules['lfe'].get_df_etudiants(chemin_fichier)
-                liste_UEX = backend_modules['lc'].get_liste_uex(chemin_fichier)
-                df_etudiants_clean = backend_modules['lfe'].df_etudiants_clean(df, liste_UEX)
-                return True, "Fichier valide"
-            return False, "Module de lecture des étudiants non disponible"
+            # Tester la lecture du fichier avec les fonctions existantes
+            df = lfe.get_df_etudiants(chemin_fichier)
+            # Utiliser les paramètres de configuration de l'interface
+            config_params = self.get_parametres_configuration()
+            liste_UEX = config_params['liste_uex']
+            lfe.df_etudiants_clean(df, liste_UEX)
+            return True, "Fichier des étudiants valide."
         except Exception as e:
             # Retourner une erreur spécifique basée sur le type d'exception
             error_msg = str(e)
@@ -501,15 +495,12 @@ class InterfaceSelectionFichiers:
     def valider_fichier_equipes(self, chemin_fichier):
         """Valide le fichier des équipes."""
         try:
-            if 'lft' not in backend_modules:
-                backend_modules['lft'] = import_backend_module('LectureFichierEquipes')
                 
-            if backend_modules['lft']:
-                # Tester la lecture et nettoyage du fichier équipes
-                df = backend_modules['lft'].get_df_equipes(chemin_fichier)
-                df_equipes_clean = backend_modules['lft'].df_equipes_clean(df)
-                return True, "Fichier valide"
-            return False, "Module de lecture des équipes non disponible"
+            # Tester la lecture et nettoyage du fichier équipes
+            df = lft.get_df_equipes(chemin_fichier)
+            lft.df_equipes_clean(df)
+            return True, "Fichier des équipes valide."
+
         except Exception as e:
             # Retourner une erreur spécifique basée sur le type d'exception
             error_msg = str(e)
@@ -531,25 +522,17 @@ class InterfaceSelectionFichiers:
     def valider_fichier_mariages(self, chemin_fichier):
         """Valide le fichier des mariages."""
         try:
-            if 'lfm' not in backend_modules:
-                backend_modules['lfm'] = import_backend_module('LectureFichierMariages')
-            if 'lc' not in backend_modules:
-                backend_modules['lc'] = import_backend_module('LectureConfig')
-            
-            if backend_modules['lfm'] is None:
-                raise ImportError("Le module LectureFichierMariages n'a pas pu être importé.")
-            if backend_modules['lc'] is None:
-                raise ImportError("Le module LectureConfig n'a pas pu être importé.")
-                
-            if backend_modules['lfm']:
-                # Tester la lecture du fichier mariages
-                df_uex, df_groupes = backend_modules['lfm'].get_dfs_mariages(chemin_fichier)
-                liste_uex = backend_modules['lc'].get_liste_uex(chemin_fichier)
-                taille_max_groupes = backend_modules['lc'].get_taille_max_groupes(chemin_fichier)
-                df_uex_clean = backend_modules['lfm'].df_mariages_UEX_clean(df_uex, liste_uex)
-                df_groupes_clean = backend_modules['lfm'].df_mariages_groupes_clean(df_groupes, liste_uex)
-                return True, "Fichier valide"
-            return False, "Module de lecture des mariages non disponible"
+
+            # Tester la lecture du fichier mariages
+            df_uex, df_groupes = lfm.get_dfs_mariages(chemin_fichier)
+            # Utiliser les paramètres de configuration de l'interface
+            config_params = self.get_parametres_configuration()
+            liste_uex = config_params['liste_uex']
+            config_params['taille_max_groupes']
+            lfm.df_mariages_UEX_clean(df_uex, liste_uex)
+            lfm.df_mariages_groupes_clean(df_groupes, liste_uex)
+            return True, "Fichier des mariages valide."
+
         except Exception as e:
             # Retourner une erreur spécifique basée sur le type d'exception
             error_msg = str(e)
@@ -629,59 +612,52 @@ class InterfaceSelectionFichiers:
     def generer_fichier_correction(self):
         """Génère le fichier de correction manuelle."""
         try:
-            # Vérifier que tous les modules nécessaires sont chargés
-            if 'adf' not in backend_modules:
-                backend_modules['adf'] = import_backend_module('AnalyseDesFichiers')
-            if 'lfe' not in backend_modules:
-                backend_modules['lfe'] = import_backend_module('LectureFichierEtudiants')
-            if 'lft' not in backend_modules:
-                backend_modules['lft'] = import_backend_module('LectureFichierEquipes')
-                
-            if backend_modules['adf'] and backend_modules['lfe'] and backend_modules['lft']:
-                
-                # Récupérer et vérifier les chemins des fichiers
-                chemin_etudiants = str(self.fichier_etudiants.get())
-                chemin_equipes = str(self.fichier_equipes.get())
-                chemin_mariages = str(self.fichier_mariages.get())
 
-                # Vérifier que les fichiers existent avant de les lire
-                if not os.path.exists(chemin_etudiants):
-                    raise FileNotFoundError(f"Le fichier étudiants n'existe pas : {chemin_etudiants}")
-                if not os.path.exists(chemin_equipes):
-                    raise FileNotFoundError(f"Le fichier équipes n'existe pas : {chemin_equipes}")
+            # Récupérer et vérifier les chemins des fichiers
+            chemin_etudiants = str(self.fichier_etudiants.get())
+            chemin_equipes = str(self.fichier_equipes.get())
+            chemin_mariages = str(self.fichier_mariages.get())
+
+            # Vérifier que les fichiers existent avant de les lire
+            if not os.path.exists(chemin_etudiants):
+                raise FileNotFoundError(f"Le fichier étudiants n'existe pas : {chemin_etudiants}")
+            if not os.path.exists(chemin_equipes):
+                raise FileNotFoundError(f"Le fichier équipes n'existe pas : {chemin_equipes}")
+
+            if not os.path.exists(chemin_mariages):
+                raise FileNotFoundError(f"Le fichier mariages n'existe pas : {chemin_mariages}")
+
+            # Lire et nettoyer les fichiers étudiants et équipes
+            df_etudiants = lfe.get_df_etudiants(chemin_etudiants)
+            liste_uex = self.get_parametres_configuration()['liste_uex']
+            df_etudiants_clean = lfe.df_etudiants_clean(df_etudiants, liste_uex)
+            df_equipes = lft.get_df_equipes(chemin_equipes)
+            df_equipes_clean = lft.df_equipes_clean(df_equipes)
+            # Appeler la fonction correction_manuelle avec les DataFrames nettoyés et chemins complets
+            liste_uex = self.get_parametres_configuration()['liste_uex']
+            adf.correction_manuelle(df_etudiants_clean, df_equipes_clean, liste_uex)
             
-                
-                # Lire et nettoyer les fichiers étudiants et équipes
-                df_etudiants = backend_modules['lfe'].get_df_etudiants(chemin_etudiants)
-                df_etudiants_clean = backend_modules['lfe'].df_etudiants_clean(df_etudiants)
-                df_equipes = backend_modules['lft'].get_df_equipes(chemin_equipes)
-                df_equipes_clean = backend_modules['lft'].df_equipes_clean(df_equipes)
-                # Appeler la fonction correction_manuelle avec les DataFrames nettoyés et chemins complets
-                backend_modules['adf'].correction_manuelle(df_etudiants_clean, df_equipes_clean)
-                
-                # Marquer que le fichier de correction a été généré
-                self.correction_generee.set(True)
-                
-                # Proposer automatiquement le fichier de correction s'il existe
-                fichier_correction_defaut = os.path.join(os.getcwd(), "correction_manuelle_resultat.xlsx")
-                if os.path.exists(fichier_correction_defaut):
-                    self.fichier_correction.set(fichier_correction_defaut)
-                    self.valider_fichier_correction(fichier_correction_defaut)
-                
-                messagebox.showinfo(
-                    "Succès", 
-                    "✅ Fichier de correction généré avec succès!\n\n"
-                    "Le fichier 'correction_manuelle_resultat.xlsx' a été créé.\n"
-                    "Sélectionnez maintenant le fichier de correction pour continuer."
+            # Marquer que le fichier de correction a été généré
+            self.correction_generee.set(True)
+            
+            # Proposer automatiquement le fichier de correction s'il existe
+            fichier_correction_defaut = os.path.join(os.getcwd(), "correction_manuelle_resultat.xlsx")
+            if os.path.exists(fichier_correction_defaut):
+                self.fichier_correction.set(fichier_correction_defaut)
+                self.valider_fichier_correction(fichier_correction_defaut)
+            
+            messagebox.showinfo(
+                "Succès", 
+                "✅ Fichier de correction généré avec succès!\n\n"
+                "Le fichier 'correction_manuelle_resultat.xlsx' a été créé.\n"
+                "Sélectionnez maintenant le fichier de correction pour continuer."
+            )
+            
+            self.label_info.config(
+                text="✅ Fichier de correction généré. Sélectionnez le fichier de correction pour continuer.",
+                fg="green"
                 )
-                
-                self.label_info.config(
-                    text="✅ Fichier de correction généré. Sélectionnez le fichier de correction pour continuer.",
-                    fg="green"
-                )
-            else:
-                messagebox.showerror("Erreur", "Un ou plusieurs modules backend ne sont pas disponibles.")
-                
+
         except FileNotFoundError as e:
             messagebox.showerror(
                 "Fichier non trouvé", 
@@ -708,34 +684,35 @@ class InterfaceSelectionFichiers:
     def lancer_mise_en_groupe(self, chemin_fichier_correction, chemin_fichier_configuration, df_mariages_groupe, df_mariages_uex):
         """Lance le processus de mise en groupe."""
         try:
-            if 'MEG' not in backend_modules:
-                backend_modules['MEG'] = import_backend_module('MiseEnGroupe')
-                
-            if backend_modules['MEG']:
-                resultat = backend_modules['MEG'].fonction_main(
-                    chemin_fichier_correction,
-                    chemin_fichier_configuration,
-                    df_mariages_groupe,
-                    df_mariages_uex
-                )
+            
+            # Récupérer les paramètres de configuration depuis l'interface
+            config_params = self.get_parametres_configuration()
+            
+            resultat = meg.fonction_main_avec_params(
+                chemin_fichier_correction,
+                df_mariages_groupe,
+                df_mariages_uex,
+                config_params['taille_groupes'],
+                config_params['liste_uex'],
+                config_params['taille_max_groupes']
+            )
 
-                if resultat and resultat[0] is not None:
-                    nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages = resultat
-                    
-                    message = f"✅ Mise en groupe terminée avec succès!\n\n"
-                    message += f"📊 Résultats :\n"
-                    message += f"• Étudiants placés : {nb_etudiants_place}/{nb_etudiants}\n"
-                    message += f"• Taux de réussite : {(nb_etudiants_place/nb_etudiants)*100:.1f}%\n"
-                    message += f"• Solution parfaite : {'Oui' if nb_etudiants_place == nb_etudiants else 'Non'}\n\n"
-                    message += "Les résultats ont été générés."
-                    
-                    messagebox.showinfo("Résultats", message)
-                    
-                    if messagebox.askyesno("Export", "Voulez-vous exporter les résultats vers Excel ?"):
-                        self.exporter_resultats(resultat)
+            if resultat and resultat[0] is not None:
+                nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages = resultat
+                
+                message = f"✅ Mise en groupe terminée avec succès!\n\n"
+                message += f"📊 Résultats :\n"
+                message += f"• Étudiants placés : {nb_etudiants_place}/{nb_etudiants}\n"
+                message += f"• Taux de réussite : {(nb_etudiants_place/nb_etudiants)*100:.1f}%\n"
+                message += f"• Solution parfaite : {'Oui' if nb_etudiants_place == nb_etudiants else 'Non'}\n\n"
+                message += "Les résultats ont été générés."
+                
+                messagebox.showinfo("Résultats", message)
+                
+                if messagebox.askyesno("Export", "Voulez-vous exporter les résultats vers Excel ?"):
+                    self.exporter_resultats(resultat)
                         
-                else:
-                    messagebox.showerror("Erreur", "La mise en groupe a échoué.")
+           
             else:
                 messagebox.showerror("Erreur", "Module de mise en groupe non disponible.")
                 
@@ -748,22 +725,13 @@ class InterfaceSelectionFichiers:
     def exporter_resultats(self, resultat):
         """Exporte les résultats vers un fichier Excel."""
         try:
-            if 'tdr' not in backend_modules:
-                backend_modules['tdr'] = import_backend_module('TraitementDesResultats')
-            
-            if backend_modules['tdr'] is not None:
-                backend_modules['tdr'].exporter_resultats(resultat)
-                messagebox.showinfo(
-                    "Export", 
-                    "✅ Résultats exportés vers 'resultats_mise_en_groupe.xlsx'"
-                )
-            
-            else:
-                messagebox.showerror(
-                    "Erreur", 
-                    "Module d'export des résultats non disponible."
-                )
-        
+            liste_uex = self.get_parametres_configuration()['liste_uex']
+            tdr.exporter_resultats(resultat, liste_uex)
+            messagebox.showinfo(
+                "Export", 
+                "✅ Résultats exportés vers 'resultats_mise_en_groupe.xlsx'"
+            )
+
 
         except Exception as e:
             import traceback
@@ -776,38 +744,17 @@ class InterfaceSelectionFichiers:
     def on_mise_en_groupe_click(self):
         """Récupère les DataFrames nettoyés et lance la mise en groupe."""
         try:
-            # Charger les modules backend nécessaires
-            if 'lfe' not in backend_modules:
-                backend_modules['lfe'] = import_backend_module('LectureFichierEtudiants')
-            if 'lft' not in backend_modules:
-                backend_modules['lft'] = import_backend_module('LectureFichierEquipes')
-            if 'lfm' not in backend_modules:
-                backend_modules['lfm'] = import_backend_module('LectureFichierMariages')
-            if 'adf' not in backend_modules:
-                backend_modules['adf'] = import_backend_module('AnalyseDesFichiers')
-            if 'lc' not in backend_modules:
-                backend_modules['lc'] = import_backend_module('LectureConfig')
-
-            # Récupérer les chemins des fichiers
+         # Récupérer les chemins des fichiers
             chemin_mariages = str(self.fichier_mariages.get())
             chemin_fichier_correction = str(self.fichier_correction.get())
 
-            # Lire et nettoyer les fichiers
-            if backend_modules['lfe'] is None:
-                raise ImportError("Le module LectureFichierEtudiants n'a pas pu être importé.")
-            if backend_modules['lft'] is None:
-                raise ImportError("Le module LectureFichierEquipes n'a pas pu être importé.")
-            if backend_modules['lfm'] is None:
-                raise ImportError("Le module LectureFichierMariages n'a pas pu être importé.")
-            if backend_modules['adf'] is None:
-                raise ImportError("Le module AnalyseDesFichiers n'a pas pu être importé.")
-            if backend_modules['lc'] is None:
-                raise ImportError("Le module LectureConfig n'a pas pu être importé.")
 
-            df_uex, df_groupes = backend_modules['lfm'].get_dfs_mariages(chemin_mariages)
-            liste_uex = backend_modules['lc'].get_liste_uex(chemin_mariages)
-            df_uex_clean = backend_modules['lfm'].df_mariages_UEX_clean(df_uex,liste_uex) 
-            df_groupe_clean = backend_modules['lfm'].df_mariages_groupes_clean(df_groupes)
+            df_uex, df_groupes = lfm.get_dfs_mariages(chemin_mariages)
+            # Utiliser les paramètres de configuration de l'interface
+            config_params = self.get_parametres_configuration()
+            liste_uex = config_params['liste_uex']
+            df_uex_clean = lfm.df_mariages_UEX_clean(df_uex,liste_uex) 
+            df_groupe_clean = lfm.df_mariages_groupes_clean(df_groupes, liste_uex)
 
             # Appeler la fonction de mise en groupe
             self.lancer_mise_en_groupe(chemin_fichier_correction, chemin_mariages, df_groupe_clean, df_uex_clean)
@@ -826,5 +773,3 @@ def afficher_grille_selection_fichiers():
     interface = InterfaceSelectionFichiers()
     interface.afficher()
 
-if __name__ == "__main__":
-    afficher_grille_selection_fichiers()

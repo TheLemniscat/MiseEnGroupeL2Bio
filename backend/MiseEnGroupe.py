@@ -1,11 +1,10 @@
-import ReconstructionPostVerif as rpv
+import backend.ReconstructionPostVerif as rpv
 import pandas as pd
 from ortools.sat.python import cp_model
 
-import LectureConfig as lc
-import Classes
+from backend import Classes
 
-import LectureFichierMariages as lfm
+import backend.LectureFichierMariages as lfm
 
 
 def randomiser_liste(liste):
@@ -275,16 +274,14 @@ def appliquer_affectation(equipes, groupes, affectation):
 
 
 
-def fonction_main(chemin_fichier_correction, chemin_fichier_config, df_mariages_groupes, df_mariages_UEX):
+def fonction_main(chemin_fichier_correction, df_mariages_groupes, df_mariages_UEX, taille_max_groupe, liste_uex, taille_groupe_lim):
     """Fonction principale pour la mise en groupe des étudiants avec OR-Tools."""
 
     df_etud_ref, df_etud_trouves, df_etud_non_trouves = rpv.recuperer_correction_manuelle(chemin_fichier_correction)
 
 
     # Recupération de la taille limite des groupes
-    taille_groupe_lim = lc.get_taille_groupes(chemin_fichier_config)
-    liste_uex = lc.get_liste_uex(chemin_fichier_config)
-    taille_max_groupe = lc.get_taille_max_groupes(chemin_fichier_config)
+ 
     taille_max_mariage = taille_max_groupe # Taille maximale des mariages, par défaut égale à la taille maximale des groupes
 
 
@@ -318,7 +315,48 @@ def fonction_main(chemin_fichier_correction, chemin_fichier_config, df_mariages_
         return nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages
     else:
         return None, None, None, None, None
+
+
+def fonction_main_avec_params(chemin_fichier_correction, df_mariages_groupes, df_mariages_UEX, 
+                             taille_groupe_lim, liste_uex, taille_max_groupe):
+    """Fonction principale pour la mise en groupe des étudiants avec OR-Tools, 
+    utilisant des paramètres passés directement au lieu de les lire depuis un fichier."""
+
+    df_etud_ref, df_etud_trouves, df_etud_non_trouves = rpv.recuperer_correction_manuelle(chemin_fichier_correction)
+
+    # Utiliser les paramètres passés en argument
+    taille_max_mariage = taille_max_groupe # Taille maximale des mariages, par défaut égale à la taille maximale des groupes
+
+    # Création des structures de données
+    liste_groupes = lfm.creation_des_groupes(df_mariages_groupes, liste_uex, taille_max_groupe)
+    groupe_bioint = lfm.creation_groupe_bioint(liste_uex, taille_max_groupe)
+    liste_groupes_avec_bioint = liste_groupes + [groupe_bioint]
+
+    liste_mariages = lfm.creation_des_mariages(liste_groupes_avec_bioint, df_mariages_UEX, liste_uex, taille_max_mariage)
+    lfm.ajouter_bioint_mariage(liste_mariages, df_mariages_groupes, liste_uex)
     
+    liste_equipes = rpv.get_liste_equipes(df_etud_ref, df_etud_trouves, df_etud_non_trouves)
+    liste_etudiants = rpv.get_etudiant_not_in_equipes(liste_equipes, df_etud_ref)
+    liste_etudiants = liste_etudiants_to_liste_equipes(liste_etudiants)
+
+    liste_equipes_complete = randomiser_liste(liste_etudiants + liste_equipes)
+
+    # Recherche de solution parfaite avec augmentation adaptative
+    affectation, success = recherche_solution_parfaite_adaptative(
+        liste_equipes_complete, liste_groupes, liste_mariages, taille_groupe_lim, max_iterations=100
+    )
+
+    succes_application = appliquer_affectation(liste_equipes_complete, liste_groupes, affectation)
+    
+    if succes_application:
+        # Calcul des statistiques finales
+        nb_etudiants = sum(equipe.length() for equipe in liste_equipes_complete)
+        nb_places = sum(groupe.get_taille_max() for groupe in liste_groupes)
+        nb_etudiants_place = sum(groupe.length() for groupe in liste_groupes)
+        
+        return nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages
+    else:
+        return None, None, None, None, None
 
 
 

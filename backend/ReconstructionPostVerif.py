@@ -1,9 +1,7 @@
-import LectureConfig as lc
 import pandas as pd
 
-from Tools import normaliser_colonne_texte
-
-import Classes
+from backend import MyTools as mytools
+from backend import Classes
 
 
 
@@ -23,9 +21,9 @@ def recuperer_correction_manuelle(file_path):
 
     if not trouver_les_lignes_sans_index(df_etud_non_trouves).empty:
         raise ValueError("Il y a des étudiants dans le fichier de correction manuelle qui n'ont pas d'INDEX_ETUDIANT. Veuillez corriger cela avant de continuer.")
-    df_etud_ref["UEX"] = normaliser_colonne_texte(df_etud_ref["UEX"])
-    df_etud_trouves["UEX"] = normaliser_colonne_texte(df_etud_trouves["UEX"])
-    df_etud_non_trouves["UEX"] = normaliser_colonne_texte(df_etud_non_trouves["UEX"])
+    df_etud_ref["UEX"] = mytools.normaliser_colonne_texte(df_etud_ref["UEX"])
+    df_etud_trouves["UEX"] = mytools.normaliser_colonne_texte(df_etud_trouves["UEX"])
+    df_etud_non_trouves["UEX"] = mytools.normaliser_colonne_texte(df_etud_non_trouves["UEX"])
     
     return df_etud_ref, df_etud_trouves, df_etud_non_trouves
 

@@ -1,6 +1,5 @@
 import pandas as pd
-from Tools import normaliser_colonne_texte
-
+from backend import MyTools as mytools
 
 # Liste des colonnes à selectionner
 df_etudiants_colonnes = ["N°", "NOM", "PRENOM","UEX"]
@@ -26,7 +25,7 @@ def df_etudiants_clean(df, liste_UEX):
 
     df_copie['N°'] = df_copie['N°'].astype(int)  # Convertit en entier
 
-    df_copie['UEX'] = normaliser_colonne_texte(df_copie['UEX'])  # Normalise la colonne UEX
+    df_copie['UEX'] = mytools.normaliser_colonne_texte(df_copie['UEX'])  # Normalise la colonne UEX
     
     # VALIDE : True si la colonne UEX contient une des valeurs de liste_UEX, False sinon
     def is_valid_uex(x):
@@ -49,6 +48,6 @@ def df_etudiants_add_column_index(df):
 def df_etudiants_normalisation(df_etudiants, liste_UEX):
     df_etudiants = df_etudiants_clean(df_etudiants, liste_UEX)
     df_out = df_etudiants.copy()
-    df_out['NOM'] = normaliser_colonne_texte(df_out['NOM'])
-    df_out['PRENOM'] = normaliser_colonne_texte(df_out['PRENOM'])
+    df_out['NOM'] = mytools.normaliser_colonne_texte(df_out['NOM'])
+    df_out['PRENOM'] = mytools.normaliser_colonne_texte(df_out['PRENOM'])
     return df_out

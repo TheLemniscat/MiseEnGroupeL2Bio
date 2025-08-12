@@ -1,8 +1,5 @@
 # File: Classes.py
 
-import LectureConfig as lc
-
-
 class Etudiant:
     def __init__(self, nom:str, prenom:str, numero_etudiant:int,uex:str,valide:bool, index_etud:int):
         self.nom = nom

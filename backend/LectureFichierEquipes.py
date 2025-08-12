@@ -1,5 +1,5 @@
 import pandas as pd
-from Tools import normaliser_colonne_texte
+from backend import MyTools as mytools
 
 # Liste des colonnes à selectionner
 df_equipe_colonnes = ["N°Obs","1. UE optionnelle du S3 commune",
@@ -190,7 +190,7 @@ def df_equipes_normalisation(df):
         liste_etudiants.append(df_temp[['N°', 'NOM_PRENOM', 'NUMERO EQUIPE', 'UEX']])
 
     df_out = pd.concat(liste_etudiants, ignore_index=True)
-    df_out['NOM_PRENOM'] = normaliser_colonne_texte(df_out['NOM_PRENOM'])
+    df_out['NOM_PRENOM'] = mytools.normaliser_colonne_texte(df_out['NOM_PRENOM'])
     
     return df_out[['N°', 'NOM_PRENOM', 'NUMERO EQUIPE', 'UEX']]
 

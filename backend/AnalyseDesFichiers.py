@@ -1,11 +1,9 @@
 import pandas as pd
-import LectureConfig as lc
-import unicodedata
 
-import LectureFichierEtudiants as lfe
-import LectureFichierEquipes as lft
+import backend.LectureFichierEtudiants as lfe
+import backend.LectureFichierEquipes as lft
 
-from Tools import normaliser_colonne_texte
+from backend import MyTools as mytools
 
 
 """
@@ -47,9 +45,9 @@ def noms_non_concordants(df_etudiants, df_equipe):
     df_etud = df_etudiants.copy()
     df_equip = df_equipe.copy().drop('UEX', axis=1, errors='ignore')
 
-    df_equip['NOM_PRENOM_EQUIPE'] = normaliser_colonne_texte(df_equip['NOM_PRENOM'])
-    df_etud['NOM_PRENOM_ETUD'] = normaliser_colonne_texte(df_etud['NOM'] + ' ' + df_etud['PRENOM'])
-    df_etud['PRENOM_NOM_ETUD'] = normaliser_colonne_texte(df_etud['PRENOM'] + ' ' + df_etud['NOM'])
+    df_equip['NOM_PRENOM_EQUIPE'] = mytools.normaliser_colonne_texte(df_equip['NOM_PRENOM'])
+    df_etud['NOM_PRENOM_ETUD'] = mytools.normaliser_colonne_texte(df_etud['NOM'] + ' ' + df_etud['PRENOM'])
+    df_etud['PRENOM_NOM_ETUD'] = mytools.normaliser_colonne_texte(df_etud['PRENOM'] + ' ' + df_etud['NOM'])
 
     merged = df_equip.merge(
         df_etud[['N°', 'NOM_PRENOM_ETUD', 'PRENOM_NOM_ETUD', 'INDEX_ETUDIANT']],
@@ -74,9 +72,9 @@ def suggere_etudiant_par_nom(non_trouves, df_etud_norm):
     # On prépare une colonne NOM_PRENOM normalisée dans les deux DataFrames
     non_trouves = non_trouves.copy()
     df_etud_norm = df_etud_norm.copy()
-    non_trouves['NOM_PRENOM'] = normaliser_colonne_texte(non_trouves['NOM_PRENOM'])
-    df_etud_norm['NOM_PRENOM'] = normaliser_colonne_texte(df_etud_norm['NOM'] + ' ' + df_etud_norm['PRENOM'])
-    df_etud_norm['PRENOM_NOM'] = normaliser_colonne_texte(df_etud_norm['PRENOM'] + ' ' + df_etud_norm['NOM'])
+    non_trouves['NOM_PRENOM'] = mytools.normaliser_colonne_texte(non_trouves['NOM_PRENOM'])
+    df_etud_norm['NOM_PRENOM'] = mytools.normaliser_colonne_texte(df_etud_norm['NOM'] + ' ' + df_etud_norm['PRENOM'])
+    df_etud_norm['PRENOM_NOM'] = mytools.normaliser_colonne_texte(df_etud_norm['PRENOM'] + ' ' + df_etud_norm['NOM'])
 
     suggestions = []
     for nom_prenom in non_trouves['NOM_PRENOM']:

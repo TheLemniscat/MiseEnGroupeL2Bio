@@ -1,4 +1,3 @@
-import pandas as pd
 import unicodedata
 
 def normaliser_colonne_texte(serie):

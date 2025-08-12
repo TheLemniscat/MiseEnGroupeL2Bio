@@ -1,6 +1,5 @@
-import Classes
+from backend import Classes
 import pandas as pd
-import MiseEnGroupe as MEG
 
 
 def liste_groupes_to_liste_EtudiantEnPlace(liste_groupes):
