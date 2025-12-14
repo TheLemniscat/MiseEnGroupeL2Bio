@@ -23,7 +23,8 @@ def recuperer_correction_manuelle(file_path):
         raise ValueError("Il y a des étudiants dans le fichier de correction manuelle qui n'ont pas d'INDEX_ETUDIANT. Veuillez corriger cela avant de continuer.")
     df_etud_ref["UEX"] = mytools.normaliser_colonne_texte(df_etud_ref["UEX"])
     df_etud_trouves["UEX"] = mytools.normaliser_colonne_texte(df_etud_trouves["UEX"])
-    df_etud_non_trouves["UEX"] = mytools.normaliser_colonne_texte(df_etud_non_trouves["UEX"])
+    if not df_etud_non_trouves.empty:
+        df_etud_non_trouves["UEX"] = mytools.normaliser_colonne_texte(df_etud_non_trouves["UEX"])
     
     return df_etud_ref, df_etud_trouves, df_etud_non_trouves
 
@@ -80,6 +81,7 @@ def verif_UEX(df_etud_ref, df_etud_reconstruits):
     if erreurs:
         index_erreur = [erreur[0] for erreur in erreurs]
         etudiant_erreur = df_etud_ref[df_etud_ref['INDEX_ETUDIANT'].isin(index_erreur)][['INDEX_ETUDIANT', 'NOM', 'PRENOM', 'UEX']]
+        etudiant_erreur.to_csv('etudiants_uex_incoherence.txt', sep='\t', index=False)
         raise ValueError(f"Des incohérences d'UEX ont été trouvées : {etudiant_erreur}")
     
 

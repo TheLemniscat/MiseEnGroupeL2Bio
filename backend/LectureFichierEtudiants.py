@@ -26,13 +26,13 @@ def df_etudiants_clean(df, liste_UEX):
     df_copie['N°'] = df_copie['N°'].astype(int)  # Convertit en entier
 
     df_copie['UEX'] = mytools.normaliser_colonne_texte(df_copie['UEX'])  # Normalise la colonne UEX
-    
-    # VALIDE : True si la colonne UEX contient une des valeurs de liste_UEX, False sinon
+
+    # VALIDE : True si la valeur de la colonne UEX contient l'expression valide, False sinon
     def is_valid_uex(x):
         if pd.isna(x):
-            return False
+            return True
         x = str(x).strip()
-        return x not in liste_UEX
+        return ('valide' in x)
 
     df_copie['VALIDE'] = df_copie['UEX'].apply(is_valid_uex)
     return df_copie

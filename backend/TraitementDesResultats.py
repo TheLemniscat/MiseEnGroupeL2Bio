@@ -44,7 +44,7 @@ def liste_EtudiantEnPlace_to_df(liste_etudiants_en_place, liste_mariages):
 
 def liste_mariages_to_df(liste_mariages):
     premier = [mariage.get_groupes_liste()[0].get_numero() for mariage in liste_mariages]
-    second = [mariage.get_groupes_liste()[1].get_numero() for mariage in liste_mariages]
+    second = [mariage.get_groupes_liste()[1].get_numero() if len(mariage.get_groupes_liste()) > 1 else pd.NA for mariage in liste_mariages]
     troisieme = [mariage.get_groupes_liste()[2].get_numero() if len(mariage.get_groupes_liste()) > 2 else pd.NA for mariage in liste_mariages]
 
 
@@ -119,6 +119,14 @@ def determiner_mariage_etudiant(etudiant, liste_mariages):
     return pd.NA
 
 def exporter_resultats(resultat, liste_uex):
+    nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages = resultat
+
+    df_mariages = liste_mariages_to_df(liste_mariages)
+    df_groupes = liste_groupes_to_df(liste_groupes, liste_uex)
+
+    print(df_mariages)
+    print(df_groupes)
+   
     try:
         nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages = resultat
 
@@ -130,7 +138,13 @@ def exporter_resultats(resultat, liste_uex):
             df_mariages = liste_mariages_to_df(liste_mariages)
             df_groupes = liste_groupes_to_df(liste_groupes, liste_uex)
 
-            ecrire_resultats_excel(df_etudiants_en_place, df_mariages, df_groupes)
+
+            try:
+                ecrire_resultats_excel(df_etudiants_en_place, df_mariages, df_groupes)
+
+            except Exception as e:
+                print(f"Erreur lors de l'écriture du fichier Excel : {str(e)}")
+
 
     except Exception as e:
         print(f"Erreur lors de l'écriture des résultats : {str(e)}")

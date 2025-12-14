@@ -16,7 +16,8 @@ class InterfaceSelectionFichiers:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Système de Mise en Groupe - Sélection des Fichiers")
-        self.root.geometry("850x850")
+        # Afficher la fenêtre en plein écran par défaut
+        self.root.attributes('-zoomed', True)
         
         # Variables pour stocker les chemins des fichiers
         self.fichier_etudiants = tk.StringVar()
@@ -114,7 +115,7 @@ class InterfaceSelectionFichiers:
         # Configuration des fichiers
         fichiers_config = [
             ("Liste des Étudiants", self.fichier_etudiants, self.valid_etudiants, self.valider_fichier_etudiants),
-            ("Liste des Équipes", self.fichier_equipes, self.valid_equipes, self.valider_fichier_equipes),
+            ("Demandes pour les Équipes", self.fichier_equipes, self.valid_equipes, self.valider_fichier_equipes),
             ("Configuration Mariages", self.fichier_mariages, self.valid_mariages, self.valider_fichier_mariages)
         ]
         
@@ -153,16 +154,15 @@ class InterfaceSelectionFichiers:
             font=("Arial", 12, "bold"),
             padx=10, pady=10
         )
-        frame_info.grid(row=3, column=0, columnspan=4, padx=20, pady=10, sticky="ew")
+        frame_info.grid(row=5, column=0, columnspan=4, padx=20, pady=10, sticky="ew")
         
         self.label_info = tk.Label(
             frame_info, 
             text="Sélectionnez les trois fichiers requis pour continuer.",
             font=("Arial", 10),
-            wraplength=750,
+            wraplength=1000,
             justify="left",
-            anchor="w",
-            height=3
+            anchor="nw"
         )
         self.label_info.grid(row=0, column=0, padx=5, pady=5, sticky="w")
         
@@ -456,14 +456,22 @@ class InterfaceSelectionFichiers:
             
             # Traiter la liste des UEX
             uex_list = [uex.strip() for uex in self.liste_uex.get().split(',') if uex.strip()]
-            
+            uex_list = [uex.lower() for uex in uex_list]  # Convertir en minuscules
+
+
             return {
                 'nombre_groupes': nb_groupes,
                 'taille_groupes': taille_groupes,
                 'taille_max_groupes': taille_max,
                 'liste_uex': uex_list
             }
+        
         except ValueError as e:
+            # Si la configuration n'a pas été rentrée du tout
+            if "invalid literal for int()" in str(e):
+                raise ValueError("Rentrez les paramètres de configuration puis réessayez.")
+            
+            # Sinon, erreur générique
             raise ValueError(f"Erreur dans les paramètres de configuration: {str(e)}")
     
     def valider_fichier_etudiants(self, chemin_fichier):
@@ -504,21 +512,8 @@ class InterfaceSelectionFichiers:
         except Exception as e:
             # Retourner une erreur spécifique basée sur le type d'exception
             error_msg = str(e)
-            if "colonnes requises" in error_msg:
-                return False, "Colonnes manquantes. Vérifiez que le fichier a la structure d'équipe attendue."
-            elif "8 chiffres" in error_msg:
-                return False, "Numéros d'étudiants invalides (doivent avoir exactement 8 chiffres). Ex: 12345678"
-            elif "noms et prénoms" in error_msg and "chiffres" in error_msg:
-                return False, "Noms/prénoms contiennent des chiffres. Utilisez uniquement des lettres et espaces."
-            elif "doublons" in error_msg:
-                return False, "Équipes en double détectées. Supprimez les doublons."
-            elif "FileNotFoundError" in str(type(e)):
-                return False, "Fichier non trouvé. Vérifiez le chemin du fichier."
-            elif "PermissionError" in str(type(e)):
-                return False, "Permission refusée. Fermez le fichier Excel s'il est ouvert."
-            else:
-                return False, f"Erreur technique: {error_msg}"
-    
+            return False, f"Erreur technique: {error_msg}"
+
     def valider_fichier_mariages(self, chemin_fichier):
         """Valide le fichier des mariages."""
         try:

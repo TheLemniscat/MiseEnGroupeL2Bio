@@ -24,6 +24,14 @@ Trois fichier excels (.xlsx) sont requis. Il faut que sur la première ligne, le
 ### 2. Fichier Liste des Équipes
 
 **Colonnes requises :**
+
+["N°Obs","1. UE optionnelle du S3 commune",
+            	"3. Numéro d'étudiant (1)",	"4. _Nom et prénom (1)",
+                "5. Numéro d'étudiant (2)",	"6. _Nom et prénom (2)",	
+                "7. Numéro d'étudiant (3)",	"8. _Nom et prénom (3)",
+                "9. Numéro d'étudiant (4)",	"10. _Nom et prénom (4)"
+
+
 - `N°Obs` : Numéro d'observation ou identifiant d'équipe
 - `UE optionnelle du S3 commune` : UE optionnelle commune à l'équipe (S3)
 - `Numéro d'étudiant (1)` : Numéro étudiant du membre 1
