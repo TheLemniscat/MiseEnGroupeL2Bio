@@ -124,8 +124,6 @@ def exporter_resultats(resultat, liste_uex):
     df_mariages = liste_mariages_to_df(liste_mariages)
     df_groupes = liste_groupes_to_df(liste_groupes, liste_uex)
 
-    print(df_mariages)
-    print(df_groupes)
    
     try:
         nb_etudiants, nb_places, nb_etudiants_place, liste_groupes, liste_mariages = resultat
